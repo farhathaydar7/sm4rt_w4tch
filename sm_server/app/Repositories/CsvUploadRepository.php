@@ -2,16 +2,15 @@
 
 namespace App\Repositories;
 
-use App\Models\User;
-use App\Repositories\Interfaces\UserRepositoryInterface;
+use App\Models\CsvUpload;
+use App\Repositories\Interfaces\CsvUploadRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 
-class UserRepository implements UserRepositoryInterface
+class CsvUploadRepository implements CsvUploadRepositoryInterface
 {
     protected $model;
 
-    public function __construct(User $model)
+    public function __construct(CsvUpload $model)
     {
         $this->model = $model;
     }
@@ -21,12 +20,12 @@ class UserRepository implements UserRepositoryInterface
         return $this->model->all();
     }
 
-    public function find(int $id): ?User
+    public function find(int $id): ?CsvUpload
     {
         return $this->model->find($id);
     }
 
-    public function create(array $data): User
+    public function create(array $data): CsvUpload
     {
         return $this->model->create($data);
     }
@@ -41,14 +40,13 @@ class UserRepository implements UserRepositoryInterface
         return $this->model->destroy($id) > 0;
     }
 
-    public function findByEmail(string $email): ?User
+    public function getByUserId(int $userId): Collection
     {
-        return $this->model->where('email', $email)->first();
+        return $this->model->where('user_id', $userId)->get();
     }
 
-    public function getUserWithMetrics(int $id): ?User
+    public function getWithActivityMetrics(int $id): ?CsvUpload
     {
-        return $this->model->with(['activityMetrics', 'predictions'])
-            ->find($id);
+        return $this->model->with('activityMetrics')->find($id);
     }
 }

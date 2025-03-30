@@ -13,13 +13,12 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('csv_uploads', function (Blueprint $table) {
             $table->id();
-            $table->string('name', 100);
-            $table->string('email', 150)->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('file_path', 255);
+            $table->timestamp('upload_date')->useCurrent();
+            $table->enum('status', ['pending', 'processed', 'failed'])->default('pending');
             $table->timestamps();
         });
     }
@@ -31,6 +30,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('csv_uploads');
     }
 };
