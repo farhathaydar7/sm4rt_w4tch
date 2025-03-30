@@ -3,6 +3,8 @@
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\CsvUploadController;
 use App\Http\Controllers\API\ActivityMetricController;
+use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\SocialAuthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,14 +18,30 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Public routes
+// Auth routes (JWT)
+Route::group(['prefix' => 'auth'], function () {
+    Route::post('register', [AuthController::class, 'register']);
+    Route::post('login', [AuthController::class, 'login']);
+    Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
+    Route::post('refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
+    Route::get('me', [AuthController::class, 'me'])->middleware('auth:api');
+});
+
+// Social authentication routes
+Route::group(['prefix' => 'auth/social'], function () {
+    Route::get('{provider}', [SocialAuthController::class, 'redirectToProvider']);
+    Route::get('{provider}/callback', [SocialAuthController::class, 'handleProviderCallback']);
+    Route::post('{provider}/callback', [SocialAuthController::class, 'handleProviderCallback']);
+});
+
+// Legacy routes - will be removed in the future
 Route::post('register', [UserController::class, 'register']);
 Route::post('login', [UserController::class, 'login']);
 
 // Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:api')->group(function () {
     Route::get('user', [UserController::class, 'user']);
-    Route::post('logout', [UserController::class, 'logout']);
+    Route::post('user/logout', [UserController::class, 'logout']);
 
     // CSV upload routes
     Route::apiResource('csv-uploads', CsvUploadController::class);
