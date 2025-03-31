@@ -7,9 +7,9 @@ import {
   Navigate,
 } from "react-router-dom";
 import { store } from "./store";
-import ActivityDashboard from "./pages/ActivityDashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
@@ -24,10 +24,11 @@ const App = () => {
               path="/"
               element={
                 <ProtectedRoute>
-                  <ActivityDashboard />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
       </Router>

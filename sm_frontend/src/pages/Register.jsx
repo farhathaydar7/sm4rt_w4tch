@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 const Register = () => {
@@ -30,12 +30,13 @@ const Register = () => {
   return (
     <div>
       <h1>Register</h1>
-      {error && <p>{error}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Name:</label>
+          <label htmlFor="name">Name:</label>
           <input
             type="text"
+            id="name"
             name="name"
             value={formData.name}
             onChange={handleChange}
@@ -43,9 +44,10 @@ const Register = () => {
           />
         </div>
         <div>
-          <label>Email:</label>
+          <label htmlFor="email">Email:</label>
           <input
             type="email"
+            id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
@@ -53,9 +55,10 @@ const Register = () => {
           />
         </div>
         <div>
-          <label>Password:</label>
+          <label htmlFor="password">Password:</label>
           <input
             type="password"
+            id="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
@@ -63,9 +66,10 @@ const Register = () => {
           />
         </div>
         <div>
-          <label>Confirm Password:</label>
+          <label htmlFor="password_confirmation">Confirm Password:</label>
           <input
             type="password"
+            id="password_confirmation"
             name="password_confirmation"
             value={formData.password_confirmation}
             onChange={handleChange}
@@ -76,6 +80,9 @@ const Register = () => {
           {loading ? "Loading..." : "Register"}
         </button>
       </form>
+      <p>
+        Already have an account? <Link to="/login">Login</Link>
+      </p>
     </div>
   );
 };
