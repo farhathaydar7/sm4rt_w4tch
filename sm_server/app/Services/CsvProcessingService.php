@@ -101,16 +101,31 @@ class CsvProcessingService
                         continue;
                     }
 
-                    $metricsData[] = [
-                        'user_id' => $csvUpload->user_id,
-                        'csv_upload_id' => $csvUpload->id,
-                        'activity_date' => $date,
-                        'steps' => $steps,
-                        'distance' => $distance,
-                        'active_minutes' => $activeMinutes,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ];
+                    // Check if a record with this user_id and activity_date already exists
+                    $existingMetric = $this->activityMetricRepository->findByUserAndDate($csvUpload->user_id, $date);
+
+                    if ($existingMetric) {
+                        // Update the existing record
+                        $this->activityMetricRepository->update($existingMetric->id, [
+                            'csv_upload_id' => $csvUpload->id,
+                            'steps' => $steps,
+                            'distance' => $distance,
+                            'active_minutes' => $activeMinutes,
+                            'updated_at' => now()
+                        ]);
+                    } else {
+                        // Add to batch for creation
+                        $metricsData[] = [
+                            'user_id' => $csvUpload->user_id,
+                            'csv_upload_id' => $csvUpload->id,
+                            'activity_date' => $date,
+                            'steps' => $steps,
+                            'distance' => $distance,
+                            'active_minutes' => $activeMinutes,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ];
+                    }
 
                     // Process in batches of 1000 to avoid memory issues with large files
                     if (count($metricsData) >= 1000) {

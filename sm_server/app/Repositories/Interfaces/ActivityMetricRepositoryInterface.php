@@ -80,4 +80,13 @@ interface ActivityMetricRepositoryInterface
      * @return Collection
      */
     public function getByDateRange(int $userId, string $startDate, string $endDate): Collection;
+
+    /**
+     * Find an activity metric by user ID and date
+     *
+     * @param int $userId
+     * @param string $date
+     * @return ActivityMetric|null
+     */
+    public function findByUserAndDate(int $userId, string $date): ?ActivityMetric;
 }

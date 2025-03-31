@@ -63,4 +63,11 @@ class ActivityMetricRepository implements ActivityMetricRepositoryInterface
             ->orderBy('activity_date')
             ->get();
     }
+
+    public function findByUserAndDate(int $userId, string $date): ?ActivityMetric
+    {
+        return $this->model->where('user_id', $userId)
+            ->where('activity_date', $date)
+            ->first();
+    }
 }
