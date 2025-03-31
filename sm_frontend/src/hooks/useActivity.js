@@ -29,6 +29,10 @@ export const useActivity = () => {
     dispatch(fetchActivityByDate(date));
   };
 
+  const getWeeklySummary = (weekId) => {
+    dispatch(fetchWeeklySummary(weekId));
+  };
+
   const refreshData = () => {
     dispatch(fetchAllActivities());
     dispatch(fetchWeeklySummary());
@@ -47,6 +51,7 @@ export const useActivity = () => {
     loading,
     error,
     getActivityByDate,
+    getWeeklySummary,
     refreshData,
     clearActivityError,
   };

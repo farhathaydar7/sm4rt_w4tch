@@ -4,33 +4,58 @@ import api from "../../services/api";
 // Async thunks
 export const fetchAllActivities = createAsyncThunk(
   "activity/fetchAll",
-  async () => {
-    const response = await api.get("/activity/all");
-    return response.data.data;
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/activity/all");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to fetch activities" }
+      );
+    }
   }
 );
 
 export const fetchActivityByDate = createAsyncThunk(
   "activity/fetchByDate",
-  async (date) => {
-    const response = await api.get(`/activity/date/${date}`);
-    return response.data.data;
+  async (date, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/activity/date/${date}`);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to fetch activity for date" }
+      );
+    }
   }
 );
 
 export const fetchWeeklySummary = createAsyncThunk(
   "activity/fetchWeeklySummary",
-  async () => {
-    const response = await api.get("/activity/week");
-    return response.data.data;
+  async (weekId, { rejectWithValue }) => {
+    try {
+      const url = weekId ? `/activity/week/${weekId}` : "/activity/week";
+      const response = await api.get(url);
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to fetch weekly summary" }
+      );
+    }
   }
 );
 
 export const fetchActivityStats = createAsyncThunk(
   "activity/fetchStats",
-  async () => {
-    const response = await api.get("/activity/stats");
-    return response.data.data;
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/activity/stats");
+      return response.data.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data || { message: "Failed to fetch activity stats" }
+      );
+    }
   }
 );
 
@@ -64,7 +89,7 @@ const activitySlice = createSlice({
       })
       .addCase(fetchAllActivities.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error = action.payload?.message || "Failed to fetch activities";
       })
       // Fetch Activity By Date
       .addCase(fetchActivityByDate.pending, (state) => {
@@ -77,7 +102,8 @@ const activitySlice = createSlice({
       })
       .addCase(fetchActivityByDate.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error =
+          action.payload?.message || "Failed to fetch activity for date";
       })
       // Fetch Weekly Summary
       .addCase(fetchWeeklySummary.pending, (state) => {
@@ -90,7 +116,8 @@ const activitySlice = createSlice({
       })
       .addCase(fetchWeeklySummary.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error =
+          action.payload?.message || "Failed to fetch weekly summary";
       })
       // Fetch Stats
       .addCase(fetchActivityStats.pending, (state) => {
@@ -103,7 +130,8 @@ const activitySlice = createSlice({
       })
       .addCase(fetchActivityStats.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message;
+        state.error =
+          action.payload?.message || "Failed to fetch activity stats";
       });
   },
 });
