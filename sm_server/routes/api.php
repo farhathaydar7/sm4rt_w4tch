@@ -45,6 +45,7 @@ Route::middleware('auth:api')->group(function () {
 
     // CSV upload routes
     Route::apiResource('csv-uploads', CsvUploadController::class);
+    Route::get('csv-uploads/{id}/status', [CsvUploadController::class, 'checkStatus']);
 
     // Activity metrics routes
     Route::get('activity-metrics', [ActivityMetricController::class, 'index']);
