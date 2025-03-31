@@ -1,5 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
-import { login, register, logout, clearError } from "../store/slices/authSlice";
+import {
+  login,
+  register,
+  logout,
+  clearError,
+  checkAuth,
+} from "../store/slices/authSlice";
 
 export const useAuth = () => {
   const dispatch = useDispatch();
@@ -23,6 +29,10 @@ export const useAuth = () => {
     dispatch(clearError());
   };
 
+  const verifyAuth = () => {
+    return dispatch(checkAuth());
+  };
+
   return {
     user,
     isAuthenticated,
@@ -32,5 +42,6 @@ export const useAuth = () => {
     register: handleRegister,
     logout: handleLogout,
     clearError: clearAuthError,
+    checkAuth: verifyAuth,
   };
 };

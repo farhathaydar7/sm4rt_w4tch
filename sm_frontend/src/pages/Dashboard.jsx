@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
 import StatsCard from "../components/StatsCard";
 import styles from "./Dashboard.module.css";
 import { activityMetrics } from "../services/api";
+import axios from "axios";
 
 const Dashboard = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -13,14 +14,80 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Use a ref to track authentication attempts
+  const authAttempted = useRef(false);
+  const dataFetchAttempted = useRef(false);
+
   const [debugInfo, setDebugInfo] = useState({
     authentication: null,
     requestStatus: null,
     responseData: null,
+    lastNetworkError: null,
+    token: null,
   });
+
+  // Debug function to test direct API access with axios
+  const testDirectApiCall = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      setDebugInfo((prev) => ({
+        ...prev,
+        token: token ? `${token.substring(0, 15)}...` : "missing",
+      }));
+
+      // Try a direct call to test the API
+      const response = await axios.get("/api/auth/me", {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setDebugInfo((prev) => ({
+        ...prev,
+        testApiCall: {
+          success: true,
+          data: response.data,
+        },
+      }));
+
+      return true;
+    } catch (err) {
+      setDebugInfo((prev) => ({
+        ...prev,
+        testApiCall: {
+          success: false,
+          error: {
+            message: err.message,
+            response: err.response
+              ? {
+                  status: err.response.status,
+                  statusText: err.response.statusText,
+                  data: err.response.data,
+                }
+              : "No response",
+          },
+        },
+      }));
+
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Reset the attempt flags when auth status changes
+    if (!isAuthenticated) {
+      dataFetchAttempted.current = false;
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fetchMetrics = async () => {
+      // Prevent multiple fetch attempts
+      if (dataFetchAttempted.current) return;
+      dataFetchAttempted.current = true;
+
       try {
         setLoading(true);
 
@@ -41,11 +108,33 @@ const Dashboard = () => {
 
         // Make the API calls using our service
         try {
-          const [dailyRes, weeklyRes, monthlyRes] = await Promise.all([
-            activityMetrics.daily(),
-            activityMetrics.weekly(),
-            activityMetrics.monthly(),
-          ]);
+          // Make individual calls rather than Promise.all to better identify issues
+          const dailyRes = await activityMetrics.daily();
+          setDebugInfo((prev) => ({
+            ...prev,
+            dailyResponse: {
+              status: dailyRes.status,
+              data: dailyRes.data,
+            },
+          }));
+
+          const weeklyRes = await activityMetrics.weekly();
+          setDebugInfo((prev) => ({
+            ...prev,
+            weeklyResponse: {
+              status: weeklyRes.status,
+              data: weeklyRes.data,
+            },
+          }));
+
+          const monthlyRes = await activityMetrics.monthly();
+          setDebugInfo((prev) => ({
+            ...prev,
+            monthlyResponse: {
+              status: monthlyRes.status,
+              data: monthlyRes.data,
+            },
+          }));
 
           setDebugInfo((prev) => ({
             ...prev,
@@ -67,7 +156,7 @@ const Dashboard = () => {
           setDebugInfo((prev) => ({
             ...prev,
             requestStatus: "requests failed",
-            responseError: {
+            lastNetworkError: {
               message: apiError.message,
               response: apiError.response
                 ? {
@@ -76,9 +165,23 @@ const Dashboard = () => {
                     data: apiError.response.data,
                   }
                 : "No response",
+              request: apiError.request
+                ? "Request object exists"
+                : "No request object",
+              config: apiError.config
+                ? {
+                    url: apiError.config.url,
+                    method: apiError.config.method,
+                    headers: {
+                      ...apiError.config.headers,
+                      Authorization: "Bearer [HIDDEN]",
+                    },
+                  }
+                : "No config",
             },
           }));
 
+          // Instead of trying to refresh token here, just pass the error up
           throw apiError;
         }
       } catch (err) {
@@ -89,10 +192,33 @@ const Dashboard = () => {
       }
     };
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !dataFetchAttempted.current) {
       fetchMetrics();
+    } else if (!isAuthenticated) {
+      setLoading(false);
     }
+
+    // No checkAuth in dependency array to prevent loops
   }, [isAuthenticated]);
+
+  // Function to retry API calls
+  const handleRetry = () => {
+    setLoading(true);
+    setError(null);
+    dataFetchAttempted.current = false;
+    authAttempted.current = false;
+
+    setDebugInfo({
+      authentication: null,
+      requestStatus: null,
+      responseData: null,
+      lastNetworkError: null,
+      token: null,
+    });
+
+    // Force a page reload instead of auth check to avoid loops
+    window.location.reload();
+  };
 
   if (loading) {
     return <div className={styles.loading}>Loading...</div>;
@@ -100,8 +226,13 @@ const Dashboard = () => {
 
   if (error) {
     return (
-      <div className={styles.error}>
-        <p>Error: {error}</p>
+      <div className={styles.errorPage}>
+        <div className={styles.error}>
+          <p>Error: {error}</p>
+          <button onClick={handleRetry} className={styles.retryButton}>
+            Retry
+          </button>
+        </div>
         <div className={styles.debugInfo}>
           <h3>Debug Information:</h3>
           <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
@@ -159,6 +290,9 @@ const Dashboard = () => {
 
       <div className={styles.debugInfo}>
         <h3>Debug Information:</h3>
+        <button onClick={testDirectApiCall} className={styles.testButton}>
+          Test API Connection
+        </button>
         <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
       </div>
     </div>

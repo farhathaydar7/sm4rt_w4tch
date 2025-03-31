@@ -183,3 +183,40 @@
   font-size: 0.875rem;
   white-space: pre-wrap;
 }
+
+.errorPage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.retryButton,
+.testButton {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.retryButton {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.retryButton:hover {
+  background-color: #2563eb;
+}
+
+.testButton {
+  background-color: #10b981;
+  color: white;
+  margin-bottom: 10px;
+}
+
+.testButton:hover {
+  background-color: #059669;
+}

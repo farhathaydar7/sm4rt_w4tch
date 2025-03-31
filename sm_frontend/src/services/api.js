@@ -2,11 +2,13 @@ import axios from "axios";
 
 // Create a dedicated instance for API calls
 const api = axios.create({
-  baseURL: "http://localhost:8000/api",
+  baseURL: "/api", // Using a relative URL that will be proxied by Vite
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
+  withCredentials: true, // Important for cookies if using cookie auth
+  timeout: 10000, // Add a timeout to prevent hanging requests
 });
 
 // For development debugging
@@ -61,7 +63,7 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  async (error) => {
     // Log errors in development
     if (isDevelopment) {
       console.error("API Error:", {
@@ -77,12 +79,20 @@ api.interceptors.response.use(
       });
     }
 
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+    // For auth endpoints, just pass through the error
+    if (error.config.url.includes("/auth/")) {
+      return Promise.reject(error);
     }
 
+    // If the error is 401, redirect to login
+    if (error.response?.status === 401) {
+      // For auth failures, just redirect to login
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // For other errors
     return Promise.reject(error);
   }
 );
@@ -93,6 +103,19 @@ export const auth = {
   register: (userData) => api.post("/auth/register", userData),
   logout: () => api.post("/auth/logout"),
   user: () => api.get("/auth/me"),
+  // Create a specific login function that stores the token
+  authenticateUser: async (credentials) => {
+    try {
+      const response = await api.post("/auth/login", credentials);
+      if (response.data && response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+      return response;
+    } catch (error) {
+      console.error("Authentication error:", error);
+      throw error;
+    }
+  },
 };
 
 // Activity metrics endpoints
