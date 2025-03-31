@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('file_path', 255);
             $table->timestamp('upload_date')->useCurrent();
-            $table->enum('status', ['pending', 'processed', 'failed'])->default('pending');
+            $table->enum('status', ['pending', 'processing', 'processed', 'partially_processed', 'failed'])->default('pending');
             $table->timestamps();
         });
     }
