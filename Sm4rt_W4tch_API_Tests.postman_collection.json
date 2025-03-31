@@ -1,0 +1,264 @@
+{
+  "info": {
+    "_postman_id": "abcdef12-1234-5678-abcd-12345678abcd",
+    "name": "Sm4rt W4tch - API Tests",
+    "description": "Collection for testing the Sm4rt W4tch API, including CSV upload functionality.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
+            "description": "Register a new user"
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.access_token) {",
+                  "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
+                  "    console.log(\"Access token saved!\");",
+                  "} else {",
+                  "    console.log(\"No access token in response!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login and get access token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current user profile"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "CSV Uploads",
+      "item": [
+        {
+          "name": "Upload CSV",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"csvUploadId\", jsonData.data.id);",
+                  "    console.log(\"CSV Upload ID saved: \" + jsonData.data.id);",
+                  "} else {",
+                  "    console.log(\"No upload ID in response!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "csv_file",
+                  "type": "file",
+                  "src": "/path/to/sample_activity_data.csv",
+                  "description": "CSV file with activity data"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/csv-uploads",
+              "host": ["{{baseUrl}}"],
+              "path": ["csv-uploads"]
+            },
+            "description": "Upload a CSV file with activity metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Upload Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["csv-uploads", "{{csvUploadId}}", "status"]
+            },
+            "description": "Check the status of a CSV upload"
+          },
+          "response": []
+        },
+        {
+          "name": "Get CSV Upload Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["csv-uploads", "{{csvUploadId}}"]
+            },
+            "description": "Get details of a CSV upload"
+          },
+          "response": []
+        },
+        {
+          "name": "List All CSV Uploads",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csv-uploads",
+              "host": ["{{baseUrl}}"],
+              "path": ["csv-uploads"]
+            },
+            "description": "List all CSV uploads for the current user"
+          },
+          "response": []
+        }
+      ],
+      "description": "CSV upload endpoints"
+    },
+    {
+      "name": "Activity Metrics",
+      "item": [
+        {
+          "name": "Get Activity Metrics for CSV Upload",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}/activity-metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["csv-uploads", "{{csvUploadId}}", "activity-metrics"]
+            },
+            "description": "Get all activity metrics for a specific CSV upload"
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Activity Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activity-metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["activity-metrics"]
+            },
+            "description": "Get all activity metrics for the current user"
+          },
+          "response": []
+        }
+      ],
+      "description": "Activity metrics endpoints"
+    }
+  ]
+}
