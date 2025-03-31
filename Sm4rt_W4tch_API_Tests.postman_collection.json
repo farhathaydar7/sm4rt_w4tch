@@ -45,19 +45,45 @@
           "response": []
         },
         {
-          "name": "Login",
+          "name": "Login (with automatic CSV processing)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.access_token) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.access_token);",
+                  "if (jsonData.authorization && jsonData.authorization.token) {",
+                  "    pm.collectionVariables.set(\"token\", jsonData.authorization.token);",
                   "    console.log(\"Access token saved!\");",
+                  "    ",
+                  "    if (jsonData.csv_upload && jsonData.csv_upload.id) {",
+                  "        pm.collectionVariables.set(\"csvUploadId\", jsonData.csv_upload.id);",
+                  "        console.log(\"CSV Upload ID saved: \" + jsonData.csv_upload.id);",
+                  "        console.log(\"CSV Upload status: \" + jsonData.csv_upload.status);",
+                  "        console.log(\"CSV Upload message: \" + jsonData.csv_upload.message);",
+                  "    } else {",
+                  "        console.log(\"No CSV upload data in response!\");",
+                  "        if (jsonData.csv_upload) {",
+                  "            console.log(\"Status: \" + jsonData.csv_upload.status);",
+                  "            console.log(\"Message: \" + jsonData.csv_upload.message);",
+                  "        }",
+                  "    }",
                   "} else {",
                   "    console.log(\"No access token in response!\");",
                   "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Note: This test assumes you have a properly formatted 'smrt.csv' file in the server's public directory",
+                  "// with valid activity data for your user ID. If the file doesn't exist or doesn't contain valid data",
+                  "// for your user ID, the CSV upload will not happen.",
+                  "",
+                  "// Please see README_SMRT_CSV.md in the public directory for instructions on how to format the file."
                 ],
                 "type": "text/javascript"
               }
@@ -80,7 +106,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["auth", "login"]
             },
-            "description": "Login and get access token"
+            "description": "Login and automatically upload activity data from smrt.csv if it exists and is valid"
           },
           "response": []
         },

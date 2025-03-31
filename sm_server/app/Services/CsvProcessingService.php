@@ -68,6 +68,12 @@ class CsvProcessingService
                 try {
                     // Map CSV columns to database fields (user_id,date,steps,distance_km,active_minutes)
                     $userId = trim($row[0]);
+
+                    // Replace placeholder {user_id} with the actual user ID
+                    if ($userId === "{user_id}") {
+                        $userId = $csvUpload->user_id;
+                    }
+
                     $date = $this->parseDate(trim($row[1]));
                     $steps = intval($row[2]);
                     $distance = floatval($row[3]);
