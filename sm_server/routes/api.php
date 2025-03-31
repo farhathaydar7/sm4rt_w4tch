@@ -55,3 +55,11 @@ Route::middleware('auth:api')->group(function () {
     // Predictions routes (to be implemented)
     // Route::resource('predictions', PredictionController::class);
 });
+
+// Activity Routes
+Route::prefix('activity')->middleware('auth:sanctum')->group(function () {
+    Route::get('/all', [App\Http\Controllers\Api\ActivityController::class, 'getAll']);
+    Route::get('/date/{date}', [App\Http\Controllers\Api\ActivityController::class, 'getByDate']);
+    Route::get('/week', [App\Http\Controllers\Api\ActivityController::class, 'getWeeklySummary']);
+    Route::get('/stats', [App\Http\Controllers\Api\ActivityController::class, 'getStats']);
+});
