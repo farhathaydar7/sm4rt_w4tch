@@ -93,27 +93,34 @@ class ActivityMetricController extends Controller
      */
     public function daily(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $today = Carbon::today()->toDateString();
+        try {
+            $userId = $request->user()->id;
+            $today = Carbon::today()->toDateString();
 
-        $metrics = $this->activityMetricRepository->getByDateRange(
-            $userId,
-            $today,
-            $today
-        );
+            $metrics = $this->activityMetricRepository->getByDateRange(
+                $userId,
+                $today,
+                $today
+            );
 
-        // Calculate totals
-        $totalSteps = $metrics->sum('steps');
-        $totalDistance = $metrics->sum('distance');
-        $totalCalories = $metrics->sum('calories');
+            // Calculate totals
+            $totalSteps = $metrics->sum('steps');
+            $totalDistance = $metrics->sum('distance');
+            $totalCalories = $metrics->sum('calories');
 
-        return response()->json([
-            'date' => $today,
-            'total_steps' => $totalSteps,
-            'total_distance' => $totalDistance,
-            'total_calories' => $totalCalories,
-            'records' => ActivityMetricResource::collection($metrics)
-        ]);
+            return response()->json([
+                'date' => $today,
+                'total_steps' => $totalSteps,
+                'total_distance' => $totalDistance,
+                'total_calories' => $totalCalories,
+                'records' => ActivityMetricResource::collection($metrics)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve daily metrics',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -124,29 +131,36 @@ class ActivityMetricController extends Controller
      */
     public function weekly(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
-        $endOfWeek = Carbon::now()->endOfWeek()->toDateString();
+        try {
+            $userId = $request->user()->id;
+            $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
+            $endOfWeek = Carbon::now()->endOfWeek()->toDateString();
 
-        $metrics = $this->activityMetricRepository->getByDateRange(
-            $userId,
-            $startOfWeek,
-            $endOfWeek
-        );
+            $metrics = $this->activityMetricRepository->getByDateRange(
+                $userId,
+                $startOfWeek,
+                $endOfWeek
+            );
 
-        // Calculate totals
-        $totalSteps = $metrics->sum('steps');
-        $totalDistance = $metrics->sum('distance');
-        $totalCalories = $metrics->sum('calories');
+            // Calculate totals
+            $totalSteps = $metrics->sum('steps');
+            $totalDistance = $metrics->sum('distance');
+            $totalCalories = $metrics->sum('calories');
 
-        return response()->json([
-            'start_date' => $startOfWeek,
-            'end_date' => $endOfWeek,
-            'total_steps' => $totalSteps,
-            'total_distance' => $totalDistance,
-            'total_calories' => $totalCalories,
-            'records' => ActivityMetricResource::collection($metrics)
-        ]);
+            return response()->json([
+                'start_date' => $startOfWeek,
+                'end_date' => $endOfWeek,
+                'total_steps' => $totalSteps,
+                'total_distance' => $totalDistance,
+                'total_calories' => $totalCalories,
+                'records' => ActivityMetricResource::collection($metrics)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve weekly metrics',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -157,28 +171,35 @@ class ActivityMetricController extends Controller
      */
     public function monthly(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
-        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
+        try {
+            $userId = $request->user()->id;
+            $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+            $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
 
-        $metrics = $this->activityMetricRepository->getByDateRange(
-            $userId,
-            $startOfMonth,
-            $endOfMonth
-        );
+            $metrics = $this->activityMetricRepository->getByDateRange(
+                $userId,
+                $startOfMonth,
+                $endOfMonth
+            );
 
-        // Calculate totals
-        $totalSteps = $metrics->sum('steps');
-        $totalDistance = $metrics->sum('distance');
-        $totalCalories = $metrics->sum('calories');
+            // Calculate totals
+            $totalSteps = $metrics->sum('steps');
+            $totalDistance = $metrics->sum('distance');
+            $totalCalories = $metrics->sum('calories');
 
-        return response()->json([
-            'start_date' => $startOfMonth,
-            'end_date' => $endOfMonth,
-            'total_steps' => $totalSteps,
-            'total_distance' => $totalDistance,
-            'total_calories' => $totalCalories,
-            'records' => ActivityMetricResource::collection($metrics)
-        ]);
+            return response()->json([
+                'start_date' => $startOfMonth,
+                'end_date' => $endOfMonth,
+                'total_steps' => $totalSteps,
+                'total_distance' => $totalDistance,
+                'total_calories' => $totalCalories,
+                'records' => ActivityMetricResource::collection($metrics)
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to retrieve monthly metrics',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
