@@ -63,3 +63,4 @@ Route::prefix('activity')->middleware('auth:sanctum')->group(function () {
     Route::get('/week', [App\Http\Controllers\Api\ActivityController::class, 'getWeeklySummary']);
     Route::get('/stats', [App\Http\Controllers\Api\ActivityController::class, 'getStats']);
 });
+
