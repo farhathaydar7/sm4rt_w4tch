@@ -49,6 +49,9 @@ Route::middleware('auth:api')->group(function () {
 
     // Activity metrics routes
     Route::get('activity-metrics', [ActivityMetricController::class, 'index']);
+    Route::get('activity-metrics/daily', [ActivityMetricController::class, 'daily']);
+    Route::get('activity-metrics/weekly', [ActivityMetricController::class, 'weekly']);
+    Route::get('activity-metrics/monthly', [ActivityMetricController::class, 'monthly']);
     Route::get('activity-metrics/{id}', [ActivityMetricController::class, 'show']);
     Route::get('csv-uploads/{csvUploadId}/activity-metrics', [ActivityMetricController::class, 'getByCsvUpload']);
 

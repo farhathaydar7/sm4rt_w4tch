@@ -22,6 +22,7 @@ class ActivityMetric extends Model
         'steps',
         'distance',
         'active_minutes',
+        'calories',
     ];
 
     /**
@@ -34,6 +35,7 @@ class ActivityMetric extends Model
         'steps' => 'integer',
         'distance' => 'decimal:2',
         'active_minutes' => 'integer',
+        'calories' => 'integer',
     ];
 
     /**
@@ -51,4 +53,4 @@ class ActivityMetric extends Model
     {
         return $this->belongsTo(CsvUpload::class);
     }
-} 
+}

@@ -7,6 +7,7 @@ use App\Http\Resources\ActivityMetricResource;
 use App\Repositories\Interfaces\ActivityMetricRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class ActivityMetricController extends Controller
 {
@@ -81,6 +82,103 @@ class ActivityMetricController extends Controller
 
         return response()->json([
             'data' => ActivityMetricResource::collection($metrics)
+        ]);
+    }
+
+    /**
+     * Get daily activity metrics for the current day
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function daily(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $today = Carbon::today()->toDateString();
+
+        $metrics = $this->activityMetricRepository->getByDateRange(
+            $userId,
+            $today,
+            $today
+        );
+
+        // Calculate totals
+        $totalSteps = $metrics->sum('steps');
+        $totalDistance = $metrics->sum('distance');
+        $totalCalories = $metrics->sum('calories');
+
+        return response()->json([
+            'date' => $today,
+            'total_steps' => $totalSteps,
+            'total_distance' => $totalDistance,
+            'total_calories' => $totalCalories,
+            'records' => ActivityMetricResource::collection($metrics)
+        ]);
+    }
+
+    /**
+     * Get weekly activity metrics for the current week
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function weekly(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $startOfWeek = Carbon::now()->startOfWeek()->toDateString();
+        $endOfWeek = Carbon::now()->endOfWeek()->toDateString();
+
+        $metrics = $this->activityMetricRepository->getByDateRange(
+            $userId,
+            $startOfWeek,
+            $endOfWeek
+        );
+
+        // Calculate totals
+        $totalSteps = $metrics->sum('steps');
+        $totalDistance = $metrics->sum('distance');
+        $totalCalories = $metrics->sum('calories');
+
+        return response()->json([
+            'start_date' => $startOfWeek,
+            'end_date' => $endOfWeek,
+            'total_steps' => $totalSteps,
+            'total_distance' => $totalDistance,
+            'total_calories' => $totalCalories,
+            'records' => ActivityMetricResource::collection($metrics)
+        ]);
+    }
+
+    /**
+     * Get monthly activity metrics for the current month
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function monthly(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $startOfMonth = Carbon::now()->startOfMonth()->toDateString();
+        $endOfMonth = Carbon::now()->endOfMonth()->toDateString();
+
+        $metrics = $this->activityMetricRepository->getByDateRange(
+            $userId,
+            $startOfMonth,
+            $endOfMonth
+        );
+
+        // Calculate totals
+        $totalSteps = $metrics->sum('steps');
+        $totalDistance = $metrics->sum('distance');
+        $totalCalories = $metrics->sum('calories');
+
+        return response()->json([
+            'start_date' => $startOfMonth,
+            'end_date' => $endOfMonth,
+            'total_steps' => $totalSteps,
+            'total_distance' => $totalDistance,
+            'total_calories' => $totalCalories,
+            'records' => ActivityMetricResource::collection($metrics)
         ]);
     }
 }
