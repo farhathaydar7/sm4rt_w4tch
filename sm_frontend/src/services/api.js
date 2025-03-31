@@ -16,6 +16,56 @@ const isDevelopment =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1";
 
+// Helper function to debug token issues
+const debugTokenProblem = (token) => {
+  if (!token) {
+    console.error("AUTH ERROR: No token found in localStorage");
+    return;
+  }
+
+  // Check token format
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    console.error(
+      "AUTH ERROR: Token format is invalid. JWT should have 3 parts separated by dots."
+    );
+    console.error(`Token has ${parts.length} parts instead of 3`);
+    return;
+  }
+
+  try {
+    // Try to decode header and payload parts (not the signature)
+    const header = JSON.parse(atob(parts[0]));
+    const payload = JSON.parse(atob(parts[1]));
+
+    console.log("JWT Header:", header);
+    console.log("JWT Payload:", payload);
+
+    // Check for common issues
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      console.error(
+        `AUTH ERROR: Token expired at ${new Date(
+          payload.exp * 1000
+        ).toLocaleString()}`
+      );
+    }
+
+    if (payload.nbf && payload.nbf > now) {
+      console.error(
+        `AUTH ERROR: Token not valid before ${new Date(
+          payload.nbf * 1000
+        ).toLocaleString()}`
+      );
+    }
+  } catch (e) {
+    console.error(
+      "AUTH ERROR: Could not decode token parts. The token might be malformed:",
+      e
+    );
+  }
+};
+
 // Add a request interceptor to add the auth token
 api.interceptors.request.use(
   (config) => {
@@ -84,8 +134,16 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // If the error is 401, redirect to login
+    // If the error is 401, print detailed token debugging and redirect to login
     if (error.response?.status === 401) {
+      console.error("=====================================================");
+      console.error("AUTH ERROR: 401 Unauthorized - Token validation failed");
+      console.error("=====================================================");
+
+      // Debug the token
+      const token = localStorage.getItem("token");
+      debugTokenProblem(token);
+
       // For auth failures, just redirect to login
       localStorage.removeItem("token");
       window.location.href = "/login";
@@ -107,8 +165,17 @@ export const auth = {
   authenticateUser: async (credentials) => {
     try {
       const response = await api.post("/auth/login", credentials);
-      if (response.data && response.data.token) {
-        localStorage.setItem("token", response.data.token);
+      if (
+        response.data &&
+        response.data.authorization &&
+        response.data.authorization.token
+      ) {
+        // Store the token properly - make sure we're getting the right structure
+        const token = response.data.authorization.token;
+        console.log("Setting token with length:", token.length);
+        localStorage.setItem("token", token);
+      } else {
+        console.error("Login response doesn't contain token:", response.data);
       }
       return response;
     } catch (error) {

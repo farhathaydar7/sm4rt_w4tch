@@ -20,7 +20,13 @@ export const register = createAsyncThunk(
   async (userData, { rejectWithValue }) => {
     try {
       const response = await auth.register(userData);
-      localStorage.setItem("token", response.data.token);
+      if (
+        response.data &&
+        response.data.authorization &&
+        response.data.authorization.token
+      ) {
+        localStorage.setItem("token", response.data.authorization.token);
+      }
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -50,6 +56,7 @@ export const checkAuth = createAsyncThunk(
       }
 
       const response = await auth.user();
+      console.log("Auth check successful", response.data);
       return response.data;
     } catch (error) {
       console.error("Auth check failed:", error);
@@ -88,7 +95,19 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.token;
+
+        // Make sure we're accessing the correct token structure
+        if (
+          action.payload.authorization &&
+          action.payload.authorization.token
+        ) {
+          state.token = action.payload.authorization.token;
+        } else {
+          console.error(
+            "Login response doesn't match expected structure:",
+            action.payload
+          );
+        }
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
@@ -103,7 +122,14 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        state.token = action.payload.token;
+
+        // Make sure we're accessing the correct token structure
+        if (
+          action.payload.authorization &&
+          action.payload.authorization.token
+        ) {
+          state.token = action.payload.authorization.token;
+        }
       })
       .addCase(register.rejected, (state, action) => {
         state.loading = false;

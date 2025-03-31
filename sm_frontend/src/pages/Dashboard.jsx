@@ -6,7 +6,7 @@ import { activityMetrics } from "../services/api";
 import axios from "axios";
 
 const Dashboard = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, checkAuth } = useAuth();
   const [metrics, setMetrics] = useState({
     daily: null,
     weekly: null,
@@ -25,6 +25,25 @@ const Dashboard = () => {
     lastNetworkError: null,
     token: null,
   });
+
+  // Debug function to show full token and headers
+  const showTokenDebugInfo = () => {
+    const token = localStorage.getItem("token");
+
+    // Display full token for debugging
+    setDebugInfo((prev) => ({
+      ...prev,
+      fullToken: token,
+      tokenLength: token ? token.length : 0,
+      tokenFirstChars: token ? token.substring(0, 20) : "N/A",
+      tokenLastChars: token ? token.substring(token.length - 20) : "N/A",
+      headers: {
+        Authorization: token ? `Bearer ${token}` : "None",
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    }));
+  };
 
   // Debug function to test direct API access with axios
   const testDirectApiCall = async () => {
@@ -99,6 +118,9 @@ const Dashboard = () => {
           }));
           throw new Error("You are not authenticated. Please log in.");
         }
+
+        // Show token info for debugging
+        showTokenDebugInfo();
 
         setDebugInfo((prev) => ({ ...prev, authentication: "Authenticated" }));
         setDebugInfo((prev) => ({
@@ -231,6 +253,12 @@ const Dashboard = () => {
           <p>Error: {error}</p>
           <button onClick={handleRetry} className={styles.retryButton}>
             Retry
+          </button>
+          <button onClick={testDirectApiCall} className={styles.testButton}>
+            Test API Connection
+          </button>
+          <button onClick={showTokenDebugInfo} className={styles.testButton}>
+            Debug Token
           </button>
         </div>
         <div className={styles.debugInfo}>
