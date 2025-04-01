@@ -696,7 +696,7 @@ class AIController extends Controller
         $prompt .= "      \"recommended_daily_active_minutes\": 30,\n";
         $prompt .= "      \"weekly_target\": 150\n";
         $prompt .= "    },\n";
-        $prompt .= "    \"assessment\": \"A string describing the user's current activity compared to their average and health benchmarks\"\n";
+        $prompt .= "    \"assessment\": \"Write a comprehensive 3-4 sentence paragraph analyzing the user's activity data. Compare current metrics to historical averages and health benchmarks. Explain the potential health implications of their current activity level. Use a personalized, friendly but professional tone.\"\n";
         $prompt .= "  },\n";
         $prompt .= "  \"health_impact\": [\n";
         $prompt .= "    {\n";

@@ -232,77 +232,84 @@ const AIInsights = ({ activityMetrics }) => {
     // If it has the newer structure with current_activity
     if (summary.current_activity) {
       return (
-        <div className={styles.summaryDetail}>
-          <div className={styles.summaryMetrics}>
-            <div className={styles.metricGroup}>
-              <h5>Today's Activity</h5>
-              <div className={styles.metricRow}>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Steps</span>
-                  <span className={styles.metricValue}>
-                    {summary.current_activity.steps?.toLocaleString() || 0}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Active Minutes</span>
-                  <span className={styles.metricValue}>
-                    {summary.current_activity.active_minutes || 0}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Distance</span>
-                  <span className={styles.metricValue}>
-                    {summary.current_activity.distance || 0} km
-                  </span>
+        <>
+          {summary.assessment && (
+            <div className={styles.analysisContainer}>
+              <p className={styles.analysisText}>{summary.assessment}</p>
+            </div>
+          )}
+          <div className={styles.summaryDetail}>
+            <div className={styles.summaryMetrics}>
+              <div className={styles.metricGroup}>
+                <h5>Today's Activity</h5>
+                <div className={styles.metricRow}>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Steps</span>
+                    <span className={styles.metricValue}>
+                      {summary.current_activity.steps?.toLocaleString() || 0}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Active Minutes</span>
+                    <span className={styles.metricValue}>
+                      {summary.current_activity.active_minutes || 0}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Distance</span>
+                    <span className={styles.metricValue}>
+                      {summary.current_activity.distance || 0} km
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className={styles.metricGroup}>
-              <h5>Your 14-Day Average</h5>
-              <div className={styles.metricRow}>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Steps</span>
-                  <span className={styles.metricValue}>
-                    {summary.historical_context?.average_steps?.toLocaleString() ||
-                      0}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Active Minutes</span>
-                  <span className={styles.metricValue}>
-                    {summary.historical_context?.average_active_minutes || 0}
-                  </span>
-                </div>
-                <div className={styles.metric}>
-                  <span className={styles.metricLabel}>Distance</span>
-                  <span className={styles.metricValue}>
-                    {summary.historical_context?.average_distance || 0} km
-                  </span>
+              <div className={styles.metricGroup}>
+                <h5>Your 14-Day Average</h5>
+                <div className={styles.metricRow}>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Steps</span>
+                    <span className={styles.metricValue}>
+                      {summary.historical_context?.average_steps?.toLocaleString() ||
+                        0}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Active Minutes</span>
+                    <span className={styles.metricValue}>
+                      {summary.historical_context?.average_active_minutes || 0}
+                    </span>
+                  </div>
+                  <div className={styles.metric}>
+                    <span className={styles.metricLabel}>Distance</span>
+                    <span className={styles.metricValue}>
+                      {summary.historical_context?.average_distance || 0} km
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className={styles.benchmark}>
-            <h5>Recommended Daily Targets</h5>
-            <div className={styles.benchmarkRow}>
-              <span>
-                Steps:{" "}
-                {summary.health_benchmarks?.recommended_daily_steps?.toLocaleString() ||
-                  "10,000"}
-              </span>
-              <span>
-                Active Minutes:{" "}
-                {summary.health_benchmarks?.recommended_daily_active_minutes ||
-                  "30"}
-              </span>
-              <span>
-                Weekly Active Minutes:{" "}
-                {summary.health_benchmarks?.weekly_target || "150"}
-              </span>
+            <div className={styles.benchmark}>
+              <h5>Recommended Daily Targets</h5>
+              <div className={styles.benchmarkRow}>
+                <span>
+                  Steps:{" "}
+                  {summary.health_benchmarks?.recommended_daily_steps?.toLocaleString() ||
+                    "10,000"}
+                </span>
+                <span>
+                  Active Minutes:{" "}
+                  {summary.health_benchmarks
+                    ?.recommended_daily_active_minutes || "30"}
+                </span>
+                <span>
+                  Weekly Active Minutes:{" "}
+                  {summary.health_benchmarks?.weekly_target || "150"}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       );
     }
 
@@ -361,6 +368,168 @@ const AIInsights = ({ activityMetrics }) => {
               {recommendation.action ||
                 recommendation.details ||
                 JSON.stringify(recommendation)}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
+  // Add a new function to render health impact items
+  const renderHealthImpact = (healthImpact) => {
+    if (!healthImpact || healthImpact.length === 0) {
+      return <p>No health impact information available.</p>;
+    }
+
+    if (!Array.isArray(healthImpact)) {
+      return (
+        <p>
+          {typeof healthImpact === "string"
+            ? healthImpact
+            : JSON.stringify(healthImpact)}
+        </p>
+      );
+    }
+
+    return (
+      <ul className={styles.impactList}>
+        {healthImpact.map((impact, index) => {
+          // Handle different formats
+          if (typeof impact === "string") {
+            return <li key={index}>{impact}</li>;
+          }
+
+          // New format with title and description
+          if (impact.title && impact.description) {
+            return (
+              <li key={index} className={styles.impactItem}>
+                <h5 className={styles.impactTitle}>{impact.title}</h5>
+                <p className={styles.impactDesc}>{impact.description}</p>
+              </li>
+            );
+          }
+
+          // Fallback for other formats
+          return (
+            <li key={index}>
+              {impact.point || impact.evidence || JSON.stringify(impact)}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
+  // Add a new function to render next steps items
+  const renderNextSteps = (nextSteps) => {
+    if (!nextSteps || nextSteps.length === 0) {
+      return <p>No next steps available.</p>;
+    }
+
+    if (!Array.isArray(nextSteps)) {
+      return (
+        <p>
+          {typeof nextSteps === "string"
+            ? nextSteps
+            : JSON.stringify(nextSteps)}
+        </p>
+      );
+    }
+
+    return (
+      <ul className={styles.stepsList}>
+        {nextSteps.map((step, index) => {
+          // Handle different formats
+          if (typeof step === "string") {
+            return (
+              <li key={index} className={styles.stepItem}>
+                <div className={styles.stepNumber}>{index + 1}</div>
+                <div className={styles.stepText}>{step}</div>
+              </li>
+            );
+          }
+
+          // New format with action, timeframe, and target
+          if (step.action) {
+            const stepContent = [step.action];
+
+            if (step.timeframe) stepContent.push(`When: ${step.timeframe}`);
+            if (step.target) stepContent.push(`Target: ${step.target}`);
+
+            return (
+              <li key={index} className={styles.stepItem}>
+                <div className={styles.stepNumber}>{index + 1}</div>
+                <div className={styles.stepContent}>
+                  <div className={styles.stepAction}>{step.action}</div>
+                  {(step.timeframe || step.target) && (
+                    <div className={styles.stepDetails}>
+                      {step.timeframe && (
+                        <span className={styles.stepTimeframe}>
+                          {step.timeframe}
+                        </span>
+                      )}
+                      {step.target && (
+                        <span className={styles.stepTarget}>{step.target}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          }
+
+          // Fallback for older formats
+          return (
+            <li key={index} className={styles.stepItem}>
+              <div className={styles.stepNumber}>{index + 1}</div>
+              <div className={styles.stepText}>
+                {step.action && step.metric
+                  ? `${step.action} ${step.metric}`
+                  : step.action || step.metric || JSON.stringify(step)}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  };
+
+  // Add a new function to render long-term benefits
+  const renderLongTermBenefits = (benefits) => {
+    if (!benefits || benefits.length === 0) {
+      return <p>No long-term benefits information available.</p>;
+    }
+
+    if (!Array.isArray(benefits)) {
+      return (
+        <p className={styles.longTermBenefits}>
+          {typeof benefits === "string" ? benefits : JSON.stringify(benefits)}
+        </p>
+      );
+    }
+
+    return (
+      <ul className={styles.benefitsList}>
+        {benefits.map((benefit, index) => {
+          // Handle different formats
+          if (typeof benefit === "string") {
+            return <li key={index}>{benefit}</li>;
+          }
+
+          // New format with benefit and description
+          if (benefit.benefit && benefit.description) {
+            return (
+              <li key={index} className={styles.benefitItem}>
+                <h5 className={styles.benefitTitle}>{benefit.benefit}</h5>
+                <p className={styles.benefitDesc}>{benefit.description}</p>
+              </li>
+            );
+          }
+
+          // Fallback for other formats
+          return (
+            <li key={index}>
+              {benefit.benefit || benefit.rationale || JSON.stringify(benefit)}
             </li>
           );
         })}
@@ -461,23 +630,7 @@ const AIInsights = ({ activityMetrics }) => {
       <div className={styles.insightSection}>
         <h4>Health Impact</h4>
         {effectiveInsights.health_impact &&
-          (Array.isArray(effectiveInsights.health_impact) ? (
-            <ul className={styles.impactList}>
-              {effectiveInsights.health_impact.map((impact, index) => (
-                <li key={index}>
-                  {typeof impact === "string"
-                    ? impact
-                    : impact.point || impact.evidence || JSON.stringify(impact)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>
-              {typeof effectiveInsights.health_impact === "string"
-                ? effectiveInsights.health_impact
-                : JSON.stringify(effectiveInsights.health_impact)}
-            </p>
-          ))}
+          renderHealthImpact(effectiveInsights.health_impact)}
       </div>
 
       <div className={styles.insightSection}>
@@ -489,52 +642,13 @@ const AIInsights = ({ activityMetrics }) => {
       <div className={styles.insightSection}>
         <h4>Next Steps</h4>
         {effectiveInsights.next_steps &&
-          (Array.isArray(effectiveInsights.next_steps) ? (
-            <ul className={styles.stepsList}>
-              {effectiveInsights.next_steps.map((step, index) => (
-                <li key={index} className={styles.stepItem}>
-                  <div className={styles.stepNumber}>{index + 1}</div>
-                  <div className={styles.stepText}>
-                    {typeof step === "string"
-                      ? step
-                      : step.action && step.metric
-                      ? `${step.action} ${step.metric}`
-                      : step.action || step.metric || JSON.stringify(step)}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>
-              {typeof effectiveInsights.next_steps === "string"
-                ? effectiveInsights.next_steps
-                : JSON.stringify(effectiveInsights.next_steps)}
-            </p>
-          ))}
+          renderNextSteps(effectiveInsights.next_steps)}
       </div>
 
       {effectiveInsights.long_term_benefits && (
         <div className={styles.insightSection}>
           <h4>Long-term Benefits</h4>
-          {Array.isArray(effectiveInsights.long_term_benefits) ? (
-            <ul className={styles.benefitsList}>
-              {effectiveInsights.long_term_benefits.map((benefit, index) => (
-                <li key={index}>
-                  {typeof benefit === "string"
-                    ? benefit
-                    : benefit.benefit ||
-                      benefit.rationale ||
-                      JSON.stringify(benefit)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.longTermBenefits}>
-              {typeof effectiveInsights.long_term_benefits === "string"
-                ? effectiveInsights.long_term_benefits
-                : JSON.stringify(effectiveInsights.long_term_benefits)}
-            </p>
-          )}
+          {renderLongTermBenefits(effectiveInsights.long_term_benefits)}
         </div>
       )}
     </div>
