@@ -549,9 +549,41 @@ class AIController extends Controller
                 Log::error('Failed to get activity metrics for fallback: ' . $dbError->getMessage());
             }
 
+            // Extract activity metrics safely
+            $safeMetrics = [];
+            $rawMetrics = $request->input('data.activity_metrics', []);
+
+            // Log what we received
+            Log::debug('Received activity metrics in exception handler', [
+                'type' => gettype($rawMetrics),
+                'is_array' => is_array($rawMetrics) ? 'yes' : 'no'
+            ]);
+
+            // Convert to safe format regardless of input structure
+            if (is_array($rawMetrics)) {
+                // Handle potential nested array structures
+                if (isset($rawMetrics['daily_steps'])) {
+                    $safeMetrics['daily_steps'] = is_array($rawMetrics['daily_steps'])
+                        ? (isset($rawMetrics['daily_steps'][0]) ? $rawMetrics['daily_steps'][0] : 0)
+                        : $rawMetrics['daily_steps'];
+                }
+
+                if (isset($rawMetrics['active_minutes'])) {
+                    $safeMetrics['active_minutes'] = is_array($rawMetrics['active_minutes'])
+                        ? (isset($rawMetrics['active_minutes'][0]) ? $rawMetrics['active_minutes'][0] : 0)
+                        : $rawMetrics['active_minutes'];
+                }
+
+                if (isset($rawMetrics['distance'])) {
+                    $safeMetrics['distance'] = is_array($rawMetrics['distance'])
+                        ? (isset($rawMetrics['distance'][0]) ? $rawMetrics['distance'][0] : 0)
+                        : $rawMetrics['distance'];
+                }
+            }
+
             // Generate a simple fallback insights in case of any error
             $fallbackInsights = $this->generateFallbackInsights(
-                $request->input('data.activity_metrics', []),
+                $safeMetrics,
                 [
                     'avg_steps' => round($avgSteps),
                     'avg_active_minutes' => round($avgActiveMinutes),
@@ -559,12 +591,20 @@ class AIController extends Controller
                 ]
             );
 
+            // Provide a clearer error message
+            $errorMessage = "AI service error";
+            if (strpos($e->getMessage(), "Array to string conversion") !== false) {
+                $errorMessage = "Data format issue. Using fallback insights.";
+            } else {
+                $errorMessage = "AI service error: " . substr($e->getMessage(), 0, 100);
+            }
+
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'insights' => $fallbackInsights,
                     'is_fallback' => true,
-                    'message' => 'AI service error: ' . $e->getMessage()
+                    'message' => $errorMessage
                 ]
             ]);
         }

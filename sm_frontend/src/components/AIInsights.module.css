@@ -17,7 +17,7 @@
 }
 
 .loadingSpinner {
-  padding: 30px;
+  padding: 20px;
   text-align: center;
   color: #666;
 }
@@ -74,19 +74,33 @@
 }
 
 .testLink {
-  margin-left: 10px;
-  padding: 5px 10px;
-  background-color: #f57c00;
+  padding: 6px 12px;
+  background-color: #2a659a;
   color: white;
-  border-radius: 3px;
+  border-radius: 4px;
+  margin-left: 10px;
   text-decoration: none;
-  font-size: 0.8rem;
-  transition: background-color 0.2s;
+  font-size: 14px;
 }
 
 .testLink:hover {
-  background-color: #e65100;
+  background-color: #1b4b7a;
+}
+
+.refreshButton {
+  padding: 6px 12px;
+  background-color: #5cb85c;
+  color: white;
+  border-radius: 4px;
+  margin-left: 10px;
   text-decoration: none;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+}
+
+.refreshButton:hover {
+  background-color: #4cae4c;
 }
 
 .insightSection {

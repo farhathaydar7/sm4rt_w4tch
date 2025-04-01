@@ -9,10 +9,32 @@ const AIInsights = ({ activityMetrics }) => {
     (state) => state.ai
   );
 
+  // Function to format metrics in the expected structure
+  const formatMetrics = (rawMetrics) => {
+    // Extract active_minutes from records if available
+    let activeMinutes = 0;
+    if (rawMetrics.records && rawMetrics.records.length > 0) {
+      // Sum up active minutes from all records for the day
+      activeMinutes = rawMetrics.records.reduce(
+        (sum, record) => sum + (record.active_minutes || 0),
+        0
+      );
+    }
+
+    return {
+      daily_steps: rawMetrics.total_steps || 0,
+      active_minutes: activeMinutes,
+      distance: rawMetrics.total_distance || 0,
+    };
+  };
+
   useEffect(() => {
     if (activityMetrics) {
+      const formattedMetrics = formatMetrics(activityMetrics);
+      console.log("Sending formatted metrics to AI:", formattedMetrics);
+
       const data = {
-        activity_metrics: activityMetrics,
+        activity_metrics: formattedMetrics,
       };
 
       dispatch(getAIInsights(data));
@@ -39,7 +61,8 @@ const AIInsights = ({ activityMetrics }) => {
           <p>Unable to load insights: {error}</p>
           <button
             onClick={() => {
-              dispatch(getAIInsights({ activity_metrics: activityMetrics }));
+              const formattedMetrics = formatMetrics(activityMetrics);
+              dispatch(getAIInsights({ activity_metrics: formattedMetrics }));
             }}
           >
             Try Again
@@ -72,13 +95,22 @@ const AIInsights = ({ activityMetrics }) => {
           <p className={styles.fallbackInfo}>
             For more detailed insights, please ensure the AI service is running.
             <a
-              href="/test_ai_connection.php"
+              href="/sm4rt_w4tch/sm_server/public/ai_connection_test.php"
               target="_blank"
               rel="noopener noreferrer"
               className={styles.testLink}
             >
               Test AI Connection
             </a>
+            <button
+              onClick={() => {
+                const formattedMetrics = formatMetrics(activityMetrics);
+                dispatch(getAIInsights({ activity_metrics: formattedMetrics }));
+              }}
+              className={styles.refreshButton}
+            >
+              Retry AI Analysis
+            </button>
           </p>
         </div>
       )}
