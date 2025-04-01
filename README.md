@@ -174,6 +174,34 @@ The project includes a Postman collection for API testing. Import the `Sm4rt_W4t
   }
   ```
 
+## Data Import
+
+To import activity data, ensure you have a file named `smrt.csv` in the `public` directory. The file should be formatted as follows:
+
+```
+user_id,date,steps,distance_km,active_minutes
+12,2025-01-01,17159,13.08,126
+12,2025-01-02,15792,12.04,34
+12,2025-01-03,14956,11.4,144
+12,2025-01-04,13972,10.65,61
+12,2025-01-05,14214,10.83,92
+12,2025-01-06,4379,3.34,148
+12,2025-01-07,6738,5.14,44
+12,2025-01-08,1481,1.13,146
+12,2025-01-09,11352,8.65,91
+12,2025-01-10,3910,2.98,25
+12,2025-01-11,10592,8.07,146
+12,2025-01-12,8325,6.35,138
+12,2025-01-13,1389,1.06,162
+12,2025-01-14,2091,1.59,177
+12,2025-01-15,12739,9.71,174
+12,2025-03-28,13378,10.2,134
+12,2025-03-30,17788,13.56,26
+12,2025-03-31,1755,1.34,57
+```
+
+This CSV file will be used to import activity data into the application.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
