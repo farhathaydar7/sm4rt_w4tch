@@ -313,7 +313,44 @@
           "response": []
         },
         {
-          "name": "Get Activity Predictions",
+          "name": "Get Comprehensive Predictions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has predictions\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.predictions).to.be.an('object');",
+                  "    ",
+                  "    // Log predictions for review",
+                  "    if (jsonData.data && jsonData.data.predictions) {",
+                  "        console.log('AI Predictions received:');",
+                  "        if (jsonData.data.predictions.goal_achievement) {",
+                  "            console.log('Goal Achievement: ' + JSON.stringify(jsonData.data.predictions.goal_achievement));",
+                  "        }",
+                  "        if (jsonData.data.predictions.anomaly_detection) {",
+                  "            console.log('Anomaly Detection: ' + JSON.stringify(jsonData.data.predictions.anomaly_detection));",
+                  "        }",
+                  "        if (jsonData.data.predictions.future_projections) {",
+                  "            console.log('Future Projections: ' + JSON.stringify(jsonData.data.predictions.future_projections));",
+                  "        }",
+                  "        if (jsonData.data.predictions.actionable_insights) {",
+                  "            console.log('Actionable Insights: ' + JSON.stringify(jsonData.data.predictions.actionable_insights));",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -332,19 +369,56 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"data\": {\n        \"activity_history\": [\n            {\n                \"date\": \"2024-01-01\",\n                \"steps\": 8000\n            },\n            {\n                \"date\": \"2024-01-02\",\n                \"steps\": 8500\n            },\n            {\n                \"date\": \"2024-01-03\",\n                \"steps\": 7800\n            },\n            {\n                \"date\": \"2024-01-04\",\n                \"steps\": 9200\n            },\n            {\n                \"date\": \"2024-01-05\",\n                \"steps\": 10000\n            }\n        ]\n    }\n}"
+              "raw": "{\n    \"data\": {\n        \"activity_history\": [\n            {\n                \"date\": \"2024-03-25\",\n                \"steps\": 8000,\n                \"active_minutes\": 35,\n                \"calories_burned\": 380\n            },\n            {\n                \"date\": \"2024-03-26\",\n                \"steps\": 8500,\n                \"active_minutes\": 40,\n                \"calories_burned\": 410\n            },\n            {\n                \"date\": \"2024-03-27\",\n                \"steps\": 7800,\n                \"active_minutes\": 30,\n                \"calories_burned\": 350\n            },\n            {\n                \"date\": \"2024-03-28\",\n                \"steps\": 9200,\n                \"active_minutes\": 48,\n                \"calories_burned\": 450\n            },\n            {\n                \"date\": \"2024-03-29\",\n                \"steps\": 12000,\n                \"active_minutes\": 65,\n                \"calories_burned\": 580\n            },\n            {\n                \"date\": \"2024-03-30\",\n                \"steps\": 6500,\n                \"active_minutes\": 25,\n                \"calories_burned\": 300\n            },\n            {\n                \"date\": \"2024-03-31\",\n                \"steps\": 7200,\n                \"active_minutes\": 30,\n                \"calories_burned\": 340\n            },\n            {\n                \"date\": \"2024-04-01\",\n                \"steps\": 9800,\n                \"active_minutes\": 50,\n                \"calories_burned\": 470\n            }\n        ],\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/ai/predict",
               "host": ["{{baseUrl}}"],
               "path": ["ai", "predict"]
             },
-            "description": "Get activity predictions based on historical data"
+            "description": "Get comprehensive AI predictions including goal achievement likelihood, anomaly detection, future projections, and actionable insights"
           },
           "response": []
         },
         {
-          "name": "Get Health Insights",
+          "name": "Get Detailed Health Insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has insights\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.insights).to.be.an('object');",
+                  "    ",
+                  "    // Log insights for review",
+                  "    if (jsonData.data && jsonData.data.insights) {",
+                  "        console.log('AI Insights received:');",
+                  "        if (jsonData.data.insights.summary) {",
+                  "            console.log('Summary: ' + JSON.stringify(jsonData.data.insights.summary));",
+                  "        }",
+                  "        if (jsonData.data.insights.health_impact) {",
+                  "            console.log('Health Impact: ' + JSON.stringify(jsonData.data.insights.health_impact));",
+                  "        }",
+                  "        if (jsonData.data.insights.recommendations) {",
+                  "            console.log('Recommendations: ' + JSON.stringify(jsonData.data.insights.recommendations));",
+                  "        }",
+                  "        if (jsonData.data.insights.next_steps) {",
+                  "            console.log('Next Steps: ' + JSON.stringify(jsonData.data.insights.next_steps));",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -363,14 +437,114 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8000,\n            \"calories_burned\": 400,\n            \"active_minutes\": 45,\n            \"heart_rate\": 72,\n            \"sleep_hours\": 7.5\n        }\n    }\n}"
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8500,\n            \"active_minutes\": 45,\n            \"distance\": 5.7\n        }\n    }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/ai/insights",
               "host": ["{{baseUrl}}"],
               "path": ["ai", "insights"]
             },
-            "description": "Get health insights based on activity metrics"
+            "description": "Get detailed health insights with summary, health impact assessment, personalized recommendations, and next steps"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Predictions (Database Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has predictions from database\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/predict",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "predict"]
+            },
+            "description": "Get predictions using the user's historical data from the database"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Insights (Database Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has insights from database\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/insights",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get insights using the user's most recent data from the database"
           },
           "response": []
         },
