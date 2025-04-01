@@ -5,6 +5,7 @@ use App\Http\Controllers\API\CsvUploadController;
 use App\Http\Controllers\API\ActivityMetricController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\SocialAuthController;
+use App\Http\Controllers\API\AIController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -65,5 +66,12 @@ Route::prefix('activity')->middleware('auth:sanctum')->group(function () {
     Route::get('/date/{date}', [App\Http\Controllers\Api\ActivityController::class, 'getByDate']);
     Route::get('/week', [App\Http\Controllers\Api\ActivityController::class, 'getWeeklySummary']);
     Route::get('/stats', [App\Http\Controllers\Api\ActivityController::class, 'getStats']);
+});
+
+// AI routes
+Route::prefix('ai')->middleware('auth:api')->group(function () {
+    Route::get('test', [AIController::class, 'testConnection']);
+    Route::post('predict', [AIController::class, 'getPredictions']);
+    Route::post('insights', [AIController::class, 'getInsights']);
 });
 

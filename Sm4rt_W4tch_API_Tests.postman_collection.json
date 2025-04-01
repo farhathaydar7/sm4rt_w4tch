@@ -285,6 +285,208 @@
         }
       ],
       "description": "Activity metrics endpoints"
+    },
+    {
+      "name": "AI Services",
+      "item": [
+        {
+          "name": "Test AI Connection",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ai/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "test"]
+            },
+            "description": "Test connection to the AI model"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Activity Predictions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_history\": [\n            {\n                \"date\": \"2024-01-01\",\n                \"steps\": 8000\n            },\n            {\n                \"date\": \"2024-01-02\",\n                \"steps\": 8500\n            },\n            {\n                \"date\": \"2024-01-03\",\n                \"steps\": 7800\n            },\n            {\n                \"date\": \"2024-01-04\",\n                \"steps\": 9200\n            },\n            {\n                \"date\": \"2024-01-05\",\n                \"steps\": 10000\n            }\n        ]\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/predict",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "predict"]
+            },
+            "description": "Get activity predictions based on historical data"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Health Insights",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8000,\n            \"calories_burned\": 400,\n            \"active_minutes\": 45,\n            \"heart_rate\": 72,\n            \"sleep_hours\": 7.5\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ai/insights",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get health insights based on activity metrics"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Direct LLM Connection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has models array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "    console.log(\"Available models: \" + JSON.stringify(jsonData.data));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:1234/v1/models",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "1234",
+              "path": ["v1", "models"]
+            },
+            "description": "Direct test of connection to LM Studio's models endpoint"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Direct LLM Chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has content\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.choices[0].message.content).to.be.a('string');",
+                  "    console.log(\"LLM response: \" + jsonData.choices[0].message.content);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"model\": \"local-model\",\n    \"messages\": [\n        {\n            \"role\": \"system\",\n            \"content\": \"You are a helpful fitness assistant.\"\n        },\n        {\n            \"role\": \"user\",\n            \"content\": \"What's a good daily step count goal?\"\n        }\n    ],\n    \"max_tokens\": 150\n}"
+            },
+            "url": {
+              "raw": "http://localhost:1234/v1/chat/completions",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "1234",
+              "path": ["v1", "chat", "completions"]
+            },
+            "description": "Direct test of LLM Studio chat completions API"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Unauthorized Access",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ai/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["ai", "test"]
+            },
+            "description": "Test unauthorized access to AI endpoint"
+          },
+          "response": []
+        }
+      ],
+      "description": "AI service endpoints for predictions and insights"
     }
   ]
 }
