@@ -228,13 +228,33 @@ class AIController extends Controller
     public function getInsights(Request $request)
     {
         try {
-            // Get activity metrics from request
-            $activityMetrics = $request->input('data.activity_metrics', []);
+            // Super detailed debugging of the incoming request
+            $allData = $request->all();
 
-            // Debug the incoming activity metrics
-            Log::debug('Incoming Activity Metrics:', [
-                'raw_metrics' => $activityMetrics,
-                'type' => gettype($activityMetrics)
+            // Handle the common case where data is a top-level field
+            $dataField = isset($allData['data']) && is_array($allData['data'])
+                ? $allData['data']
+                : (array)$request->input('data', []);
+
+            // Log the structure we've extracted
+            Log::debug('DETAILED REQUEST STRUCTURE', [
+                'request_method' => $request->method(),
+                'content_type' => $request->header('Content-Type'),
+                'has_data_field' => isset($allData['data']) ? 'yes' : 'no',
+                'data_field_type' => isset($allData['data']) ? gettype($allData['data']) : 'not_set'
+            ]);
+
+            // Get activity metrics from the structured data
+            $activityMetrics = [];
+            if (isset($dataField['activity_metrics'])) {
+                $activityMetrics = $dataField['activity_metrics'];
+            }
+
+            // Debug the extracted activity metrics
+            Log::debug('Extracted Activity Metrics:', [
+                'metrics_type' => gettype($activityMetrics),
+                'is_array' => is_array($activityMetrics) ? 'yes' : 'no',
+                'metrics_json' => json_encode($activityMetrics)
             ]);
 
             // If no metrics are provided, try to get recent data from the database
@@ -283,6 +303,76 @@ class AIController extends Controller
                 'model' => $this->aiModel,
                 'prompt_length' => strlen($userMessage)
             ]);
+
+            // Before sending to the AI, verify that we have valid data
+            try {
+                // Extract steps, active_minutes, and distance ensuring they're scalar values
+                $steps = 0;
+                $activeMinutes = 0;
+                $distance = 0;
+
+                if (isset($activityMetrics['daily_steps'])) {
+                    if (is_array($activityMetrics['daily_steps'])) {
+                        // Try to extract a numeric value from the array
+                        if (isset($activityMetrics['daily_steps'][0]) && is_numeric($activityMetrics['daily_steps'][0])) {
+                            $steps = $activityMetrics['daily_steps'][0];
+                        } elseif (isset($activityMetrics['daily_steps']['value']) && is_numeric($activityMetrics['daily_steps']['value'])) {
+                            $steps = $activityMetrics['daily_steps']['value'];
+                        }
+                    } else {
+                        $steps = is_numeric($activityMetrics['daily_steps']) ? $activityMetrics['daily_steps'] : 0;
+                    }
+                }
+
+                if (isset($activityMetrics['active_minutes'])) {
+                    if (is_array($activityMetrics['active_minutes'])) {
+                        // Try to extract a numeric value from the array
+                        if (isset($activityMetrics['active_minutes'][0]) && is_numeric($activityMetrics['active_minutes'][0])) {
+                            $activeMinutes = $activityMetrics['active_minutes'][0];
+                        } elseif (isset($activityMetrics['active_minutes']['value']) && is_numeric($activityMetrics['active_minutes']['value'])) {
+                            $activeMinutes = $activityMetrics['active_minutes']['value'];
+                        }
+                    } else {
+                        $activeMinutes = is_numeric($activityMetrics['active_minutes']) ? $activityMetrics['active_minutes'] : 0;
+                    }
+                }
+
+                if (isset($activityMetrics['distance'])) {
+                    if (is_array($activityMetrics['distance'])) {
+                        // Try to extract a numeric value from the array
+                        if (isset($activityMetrics['distance'][0]) && is_numeric($activityMetrics['distance'][0])) {
+                            $distance = $activityMetrics['distance'][0];
+                        } elseif (isset($activityMetrics['distance']['value']) && is_numeric($activityMetrics['distance']['value'])) {
+                            $distance = $activityMetrics['distance']['value'];
+                        }
+                    } else {
+                        $distance = is_numeric($activityMetrics['distance']) ? $activityMetrics['distance'] : 0;
+                    }
+                }
+
+                // Use the sanitized values for the AI request
+                $cleanedMetrics = [
+                    'daily_steps' => $steps,
+                    'active_minutes' => $activeMinutes,
+                    'distance' => $distance
+                ];
+
+                // Re-format the prompt with cleaned data
+                $userMessage = $this->formatInsightsPrompt($cleanedMetrics, [
+                    'avg_steps' => round($avgSteps),
+                    'avg_active_minutes' => round($avgActiveMinutes),
+                    'avg_distance' => round($avgDistance, 2)
+                ]);
+
+                Log::debug("Using cleaned metrics for AI request", [
+                    'cleaned_metrics' => $cleanedMetrics
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("Error while sanitizing metrics: " . $e->getMessage(), [
+                    'trace' => $e->getTraceAsString()
+                ]);
+                // Continue with the original message if there was an error
+            }
 
             // Prepare the request payload
             $requestPayload = [
@@ -770,13 +860,78 @@ class AIController extends Controller
      */
     private function generateFallbackInsights($currentMetrics, $averages)
     {
-        // Ensure we have scalar values, not arrays
-        $steps = isset($currentMetrics['daily_steps']) ? (is_array($currentMetrics['daily_steps']) ? 0 : $currentMetrics['daily_steps']) : 0;
-        $activeMinutes = isset($currentMetrics['active_minutes']) ? (is_array($currentMetrics['active_minutes']) ? 0 : $currentMetrics['active_minutes']) : 0;
-        $distance = isset($currentMetrics['distance']) ? (is_array($currentMetrics['distance']) ? 0 : $currentMetrics['distance']) : 0;
+        // First ensure that currentMetrics is an array
+        if (!is_array($currentMetrics)) {
+            Log::error('generateFallbackInsights received non-array currentMetrics', [
+                'type' => gettype($currentMetrics),
+                'value' => $currentMetrics
+            ]);
+            $currentMetrics = [];
+        }
 
-        // Log the metrics for debugging
-        Log::debug('Fallback Insights - Current Metrics:', [
+        // Extract values safely
+        $steps = 0;
+        if (isset($currentMetrics['daily_steps'])) {
+            if (is_array($currentMetrics['daily_steps'])) {
+                // If it's an array, log it and try to extract a usable value
+                Log::debug('daily_steps is an array', [
+                    'array_value' => $currentMetrics['daily_steps']
+                ]);
+                // Try to get the first value, or a 'value' key if it exists
+                if (isset($currentMetrics['daily_steps'][0])) {
+                    $steps = is_numeric($currentMetrics['daily_steps'][0]) ?
+                        $currentMetrics['daily_steps'][0] : 0;
+                } elseif (isset($currentMetrics['daily_steps']['value'])) {
+                    $steps = is_numeric($currentMetrics['daily_steps']['value']) ?
+                        $currentMetrics['daily_steps']['value'] : 0;
+                }
+            } else {
+                // It's a scalar value, use it directly
+                $steps = is_numeric($currentMetrics['daily_steps']) ?
+                    $currentMetrics['daily_steps'] : 0;
+            }
+        }
+
+        $activeMinutes = 0;
+        if (isset($currentMetrics['active_minutes'])) {
+            if (is_array($currentMetrics['active_minutes'])) {
+                Log::debug('active_minutes is an array', [
+                    'array_value' => $currentMetrics['active_minutes']
+                ]);
+                if (isset($currentMetrics['active_minutes'][0])) {
+                    $activeMinutes = is_numeric($currentMetrics['active_minutes'][0]) ?
+                        $currentMetrics['active_minutes'][0] : 0;
+                } elseif (isset($currentMetrics['active_minutes']['value'])) {
+                    $activeMinutes = is_numeric($currentMetrics['active_minutes']['value']) ?
+                        $currentMetrics['active_minutes']['value'] : 0;
+                }
+            } else {
+                $activeMinutes = is_numeric($currentMetrics['active_minutes']) ?
+                    $currentMetrics['active_minutes'] : 0;
+            }
+        }
+
+        $distance = 0;
+        if (isset($currentMetrics['distance'])) {
+            if (is_array($currentMetrics['distance'])) {
+                Log::debug('distance is an array', [
+                    'array_value' => $currentMetrics['distance']
+                ]);
+                if (isset($currentMetrics['distance'][0])) {
+                    $distance = is_numeric($currentMetrics['distance'][0]) ?
+                        $currentMetrics['distance'][0] : 0;
+                } elseif (isset($currentMetrics['distance']['value'])) {
+                    $distance = is_numeric($currentMetrics['distance']['value']) ?
+                        $currentMetrics['distance']['value'] : 0;
+                }
+            } else {
+                $distance = is_numeric($currentMetrics['distance']) ?
+                    $currentMetrics['distance'] : 0;
+            }
+        }
+
+        // Log the processed metrics for debugging
+        Log::debug('Fallback Insights - Processed Metrics:', [
             'raw_metrics' => $currentMetrics,
             'processed_steps' => $steps,
             'processed_active_minutes' => $activeMinutes,
