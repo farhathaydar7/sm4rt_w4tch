@@ -16,3 +16,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Add a named login route for auth middleware redirects
+Route::get('/login', function () {
+    return response()->json(['message' => 'Please login to access this resource'], 401);
+})->name('login');

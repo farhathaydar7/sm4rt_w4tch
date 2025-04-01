@@ -185,6 +185,7 @@ return [
         /*
          * Package Service Providers...
          */
+        App\Providers\RepositoryServiceProvider::class,
 
         /*
          * Application Service Providers...
@@ -196,6 +197,7 @@ return [
         App\Providers\RouteServiceProvider::class,
 
     ],
+
 
     /*
     |--------------------------------------------------------------------------

@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\LocalCsvUploadService;
+use App\Repositories\Interfaces\CsvUploadRepositoryInterface;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +16,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Register LocalCsvUploadService
+        $this->app->singleton(LocalCsvUploadService::class, function ($app) {
+            return new LocalCsvUploadService(
+                $app->make(CsvUploadRepositoryInterface::class)
+            );
+        });
     }
 
     /**
@@ -23,6 +31,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        //
+        // Set the default guard to API
+        Auth::shouldUse('api');
     }
 }

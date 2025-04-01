@@ -1,0 +1,705 @@
+{
+  "info": {
+    "_postman_id": "a7c43e85-3f9a-4c91-b6d5-8b7b9f8e4d2c",
+    "name": "Sm4rt W4tch API Tests",
+    "description": "A collection for testing the Sm4rt W4tch API endpoints, with a focus on the AI features.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has token\", function () {",
+                  "    pm.expect(jsonData.token).to.exist;",
+                  "});",
+                  "",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"auth_token\", jsonData.token);",
+                  "    console.log(\"Token saved to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/auth/login",
+              "host": ["{{api_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login to get the authentication token"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for getting tokens"
+    },
+    {
+      "name": "AI Endpoints",
+      "item": [
+        {
+          "name": "Test AI Connection",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Message indicates AI is running\", function () {",
+                  "    pm.expect(jsonData.message).to.include(\"AI model is running\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/ai/test",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "test"]
+            },
+            "description": "Test if the AI service is running and accessible"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains insights data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.insights).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback insights",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback insights - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific insights sections",
+                  "pm.test(\"Insights contains required sections\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights.summary).to.exist;",
+                  "    pm.expect(insights.health_impact).to.exist;",
+                  "    pm.expect(insights.recommendations).to.exist;",
+                  "});",
+                  "",
+                  "// Check for new structured format",
+                  "pm.test(\"Insights contains new structured format\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    ",
+                  "    // Check if summary has the new structure",
+                  "    if (insights.summary && typeof insights.summary === 'object') {",
+                  "        if (insights.summary.current_activity) {",
+                  "            pm.expect(insights.summary.current_activity).to.be.an('object');",
+                  "            pm.expect(insights.summary.current_activity.steps).to.exist;",
+                  "            pm.expect(insights.summary.current_activity.active_minutes).to.exist;",
+                  "            pm.expect(insights.summary.current_activity.distance).to.exist;",
+                  "        }",
+                  "        ",
+                  "        if (insights.summary.assessment) {",
+                  "            pm.expect(insights.summary.assessment).to.be.a('string');",
+                  "            console.log(\"Assessment included: \" + insights.summary.assessment.substring(0, 100) + \"...\");",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Check health impact format",
+                  "    if (Array.isArray(insights.health_impact) && insights.health_impact.length > 0) {",
+                  "        const firstImpact = insights.health_impact[0];",
+                  "        if (typeof firstImpact === 'object') {",
+                  "            if (firstImpact.title) {",
+                  "                pm.expect(firstImpact.title).to.be.a('string');",
+                  "                pm.expect(firstImpact.description).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Check recommendations format",
+                  "    if (Array.isArray(insights.recommendations) && insights.recommendations.length > 0) {",
+                  "        const firstRecommendation = insights.recommendations[0];",
+                  "        if (typeof firstRecommendation === 'object') {",
+                  "            if (firstRecommendation.title) {",
+                  "                pm.expect(firstRecommendation.title).to.be.a('string');",
+                  "                pm.expect(firstRecommendation.description).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Check next steps format",
+                  "    if (Array.isArray(insights.next_steps) && insights.next_steps.length > 0) {",
+                  "        const firstStep = insights.next_steps[0];",
+                  "        if (typeof firstStep === 'object') {",
+                  "            if (firstStep.action) {",
+                  "                pm.expect(firstStep.action).to.be.a('string');",
+                  "                if (firstStep.timeframe) pm.expect(firstStep.timeframe).to.be.a('string');",
+                  "                if (firstStep.target) pm.expect(firstStep.target).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Check long-term benefits if available",
+                  "    if (insights.long_term_benefits) {",
+                  "        pm.expect(insights.long_term_benefits).to.be.an('array');",
+                  "        if (insights.long_term_benefits.length > 0) {",
+                  "            const firstBenefit = insights.long_term_benefits[0];",
+                  "            if (typeof firstBenefit === 'object') {",
+                  "                if (firstBenefit.benefit) {",
+                  "                    pm.expect(firstBenefit.benefit).to.be.a('string');",
+                  "                    pm.expect(firstBenefit.description).to.be.a('string');",
+                  "                }",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8542,\n            \"active_minutes\": 35,\n            \"distance\": 6.83\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get AI-generated insights about activity data"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Predictions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains predictions data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.predictions).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback predictions",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback predictions - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific prediction sections",
+                  "pm.test(\"Predictions contains required sections\", function () {",
+                  "    const predictions = jsonData.data.predictions;",
+                  "    pm.expect(predictions.goal_achievement).to.exist;",
+                  "    pm.expect(predictions.anomaly_detection).to.exist;",
+                  "    pm.expect(predictions.future_projections).to.exist;",
+                  "    pm.expect(predictions.actionable_insights).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate sample activity history data",
+                  "function generateSampleData(numDays) {",
+                  "    const data = [];",
+                  "    const today = new Date();",
+                  "    ",
+                  "    for (let i = 0; i < numDays; i++) {",
+                  "        const date = new Date();",
+                  "        date.setDate(today.getDate() - i);",
+                  "        const dateStr = date.toISOString().split('T')[0];",
+                  "        ",
+                  "        // Generate random but reasonable values",
+                  "        const steps = Math.floor(Math.random() * 10000) + 5000;",
+                  "        const activeMinutes = Math.floor(Math.random() * 40) + 20;",
+                  "        const distance = Math.round(steps * 0.0008 * 100) / 100;",
+                  "        ",
+                  "        data.push({",
+                  "            date: dateStr,",
+                  "            steps: steps,",
+                  "            active_minutes: activeMinutes,",
+                  "            distance: distance",
+                  "        });",
+                  "    }",
+                  "    ",
+                  "    return data;",
+                  "}",
+                  "",
+                  "// Store the generated data in a variable",
+                  "pm.variables.set('activityHistory', JSON.stringify(generateSampleData(14)));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_history\": {{activityHistory}},\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/predict",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "predict"]
+            },
+            "description": "Get AI-generated predictions based on activity history"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Insights (Database Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains insights data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.insights).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback insights",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback insights - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific insights sections",
+                  "pm.test(\"Insights contains required sections\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights.summary).to.exist;",
+                  "    pm.expect(insights.health_impact).to.exist;",
+                  "    pm.expect(insights.recommendations).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {}\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get AI-generated insights using data from the database"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Insights (Structured Format)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains raw_response field\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.raw_response).to.exist;",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains structured insights\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights).to.exist;",
+                  "    pm.expect(insights.summary).to.exist;",
+                  "    ",
+                  "    // Check for new structured format",
+                  "    if (insights.summary && typeof insights.summary === 'object') {",
+                  "        if (insights.summary.current_activity) {",
+                  "            pm.expect(insights.summary.current_activity).to.be.an('object');",
+                  "            pm.expect(insights.summary.current_activity.steps).to.exist;",
+                  "            pm.expect(insights.summary.current_activity.active_minutes).to.exist;",
+                  "            pm.expect(insights.summary.current_activity.distance).to.exist;",
+                  "            ",
+                  "            console.log(\"Current activity:\", insights.summary.current_activity);",
+                  "        }",
+                  "        ",
+                  "        if (insights.summary.historical_context) {",
+                  "            pm.expect(insights.summary.historical_context).to.be.an('object');",
+                  "            pm.expect(insights.summary.historical_context.average_steps).to.exist;",
+                  "            pm.expect(insights.summary.historical_context.average_active_minutes).to.exist;",
+                  "            pm.expect(insights.summary.historical_context.average_distance).to.exist;",
+                  "        }",
+                  "        ",
+                  "        if (insights.summary.assessment) {",
+                  "            pm.expect(insights.summary.assessment).to.be.a('string');",
+                  "            console.log(\"Assessment excerpt: \" + insights.summary.assessment.substring(0, 100) + \"...\");",
+                  "        }",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test(\"Insights contains properly structured sections\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    ",
+                  "    // Health impact section",
+                  "    if (Array.isArray(insights.health_impact) && insights.health_impact.length > 0) {",
+                  "        const impact = insights.health_impact[0];",
+                  "        console.log(\"Health impact format:\", typeof impact, Object.keys(impact));",
+                  "        ",
+                  "        if (typeof impact === 'object') {",
+                  "            if (impact.title) {",
+                  "                pm.expect(impact.title).to.be.a('string');",
+                  "                pm.expect(impact.description).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Recommendations section",
+                  "    if (Array.isArray(insights.recommendations) && insights.recommendations.length > 0) {",
+                  "        const recommendation = insights.recommendations[0];",
+                  "        console.log(\"Recommendation format:\", typeof recommendation, Object.keys(recommendation));",
+                  "        ",
+                  "        if (typeof recommendation === 'object') {",
+                  "            if (recommendation.title) {",
+                  "                pm.expect(recommendation.title).to.be.a('string');",
+                  "                pm.expect(recommendation.description).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Next steps section",
+                  "    if (Array.isArray(insights.next_steps) && insights.next_steps.length > 0) {",
+                  "        const step = insights.next_steps[0];",
+                  "        console.log(\"Next step format:\", typeof step, Object.keys(step));",
+                  "        ",
+                  "        if (typeof step === 'object') {",
+                  "            if (step.action) {",
+                  "                pm.expect(step.action).to.be.a('string');",
+                  "            }",
+                  "            ",
+                  "            if (step.timeframe) {",
+                  "                pm.expect(step.timeframe).to.be.a('string');",
+                  "            }",
+                  "            ",
+                  "            if (step.target) {",
+                  "                pm.expect(step.target).to.be.a('string');",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "    ",
+                  "    // Long-term benefits section",
+                  "    if (insights.long_term_benefits) {",
+                  "        pm.expect(insights.long_term_benefits).to.be.an('array');",
+                  "        ",
+                  "        if (insights.long_term_benefits.length > 0) {",
+                  "            const benefit = insights.long_term_benefits[0];",
+                  "            console.log(\"Benefit format:\", typeof benefit, Object.keys(benefit));",
+                  "            ",
+                  "            if (typeof benefit === 'object') {",
+                  "                if (benefit.benefit) {",
+                  "                    pm.expect(benefit.benefit).to.be.a('string');",
+                  "                    pm.expect(benefit.description).to.be.a('string');",
+                  "                }",
+                  "            }",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 6542,\n            \"active_minutes\": 45,\n            \"distance\": 5.23\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get AI-generated insights in the new structured format"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Insights (Large Values Test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response handles large values correctly\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights).to.exist;",
+                  "    ",
+                  "    // Check if summary correctly reflects the large step count",
+                  "    if (insights.summary && typeof insights.summary === 'object') {",
+                  "        if (insights.summary.current_activity) {",
+                  "            pm.expect(insights.summary.current_activity.steps).to.be.above(100000);",
+                  "            console.log(\"Large step count handled:\", insights.summary.current_activity.steps);",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 120000,\n            \"active_minutes\": 180,\n            \"distance\": 95.5\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Test AI insights with unusually large values to verify edge case handling"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Predictions (Database Data)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains predictions data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.predictions).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback predictions",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback predictions - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific prediction sections",
+                  "pm.test(\"Predictions contains required sections\", function () {",
+                  "    const predictions = jsonData.data.predictions;",
+                  "    pm.expect(predictions.goal_achievement).to.exist;",
+                  "    pm.expect(predictions.anomaly_detection).to.exist;",
+                  "    pm.expect(predictions.future_projections).to.exist;",
+                  "    pm.expect(predictions.actionable_insights).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {}\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/predict",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "predict"]
+            },
+            "description": "Get AI-generated predictions using data from the database"
+          },
+          "response": []
+        }
+      ],
+      "description": "Endpoints for AI functionality testing"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "api_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "user_email",
+      "value": "test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "user_password",
+      "value": "password123",
+      "type": "string"
+    }
+  ]
+}
