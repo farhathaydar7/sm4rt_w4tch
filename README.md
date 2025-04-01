@@ -204,4 +204,4 @@ This CSV file will be used to import activity data into the application.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is tottally legit under the my guidance - see the LICENSE file for details :) .
