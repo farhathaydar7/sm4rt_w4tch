@@ -238,8 +238,15 @@ class AIController extends Controller
                 'avg_distance' => round($avgDistance, 2)
             ]);
 
-            // Make request to AI model with a timeout
-            $response = Http::timeout($this->aiTimeout)->post($this->aiEndpoint . '/v1/chat/completions', [
+            // Debug info - log the request we're about to make
+            Log::info("Preparing AI Insights request", [
+                'endpoint' => $this->aiEndpoint,
+                'model' => $this->aiModel,
+                'prompt_length' => strlen($userMessage)
+            ]);
+
+            // Prepare the request payload
+            $requestPayload = [
                 'model' => $this->aiModel,
                 'messages' => [
                     [
@@ -250,30 +257,99 @@ class AIController extends Controller
                 ],
                 'temperature' => $this->aiTemperature,
                 'max_tokens' => -1
-            ]);
+            ];
 
-            if ($response->successful()) {
-                // Process the LLM response
-                $llmResponse = $response->json();
-                $insightsText = $llmResponse['choices'][0]['message']['content'] ?? '';
+            // Log the full request for debugging
+            Log::debug("AI Insights Request Payload", $requestPayload);
 
-                // Try to parse the response as JSON
-                $parsedInsights = $this->extractJsonFromResponse($insightsText);
+            // Make request to AI model with a timeout
+            try {
+                $response = Http::timeout($this->aiTimeout)
+                    ->withHeaders([
+                        'Content-Type' => 'application/json',
+                        'Accept' => 'application/json'
+                    ])
+                    ->post($this->aiEndpoint . '/v1/chat/completions', $requestPayload);
+
+                // Log the raw response status and headers for debugging
+                Log::info("AI Response Status: " . $response->status(), [
+                    'headers' => $response->headers(),
+                    'status' => $response->status(),
+                    'successful' => $response->successful() ? 'true' : 'false',
+                    'response_length' => strlen($response->body())
+                ]);
+
+                if ($response->successful()) {
+                    // Process the LLM response
+                    $llmResponse = $response->json();
+
+                    // Log the raw response structure
+                    Log::debug("AI Raw Response Structure", [
+                        'has_choices' => isset($llmResponse['choices']) ? 'yes' : 'no',
+                        'choices_count' => isset($llmResponse['choices']) ? count($llmResponse['choices']) : 0,
+                        'first_choice_keys' => isset($llmResponse['choices'][0]) ? array_keys($llmResponse['choices'][0]) : []
+                    ]);
+
+                    $insightsText = $llmResponse['choices'][0]['message']['content'] ?? '';
+
+                    // Try to parse the response as JSON
+                    $parsedInsights = $this->extractJsonFromResponse($insightsText);
+
+                    return response()->json([
+                        'status' => 'success',
+                        'data' => [
+                            'insights' => $parsedInsights,
+                            'raw_response' => $insightsText
+                        ]
+                    ]);
+                }
+
+                // If we get a connection error or timeout, provide a fallback response
+                if ($response->serverError() || $response->status() === 0) {
+                    Log::warning('AI service timeout or connection error. Using fallback insights.', [
+                        'status_code' => $response->status(),
+                        'error' => $response->body()
+                    ]);
+
+                    // Generate a basic fallback insights
+                    $fallbackInsights = $this->generateFallbackInsights($activityMetrics, [
+                        'avg_steps' => round($avgSteps),
+                        'avg_active_minutes' => round($avgActiveMinutes),
+                        'avg_distance' => round($avgDistance, 2)
+                    ]);
+
+                    return response()->json([
+                        'status' => 'success',
+                        'data' => [
+                            'insights' => $fallbackInsights,
+                            'is_fallback' => true,
+                            'message' => 'AI service unavailable. Using fallback insights.'
+                        ]
+                    ]);
+                }
+
+                // Log any other error types
+                Log::error('AI service returned an unexpected status code', [
+                    'status_code' => $response->status(),
+                    'response' => $response->body()
+                ]);
 
                 return response()->json([
-                    'status' => 'success',
-                    'data' => [
-                        'insights' => $parsedInsights,
-                        'raw_response' => $insightsText
-                    ]
+                    'status' => 'error',
+                    'message' => 'Failed to get insights',
+                    'error' => $response->body(),
+                    'status_code' => $response->status()
+                ], 503);
+
+            } catch (\Illuminate\Http\Client\ConnectionException $ce) {
+                // Specific handling for connection exceptions
+                Log::error('AI Connection Exception: ' . $ce->getMessage(), [
+                    'exception' => get_class($ce),
+                    'message' => $ce->getMessage(),
+                    'trace' => $ce->getTraceAsString()
                 ]);
-            }
 
-            // If we get a connection error or timeout, provide a fallback response
-            if ($response->serverError() || $response->status() === 0) {
-                Log::warning('AI service timeout or connection error. Using fallback insights.');
-
-                // Generate a basic fallback insights
+                // Generate a fallback due to connection issue
                 $fallbackInsights = $this->generateFallbackInsights($activityMetrics, [
                     'avg_steps' => round($avgSteps),
                     'avg_active_minutes' => round($avgActiveMinutes),
@@ -285,19 +361,19 @@ class AIController extends Controller
                     'data' => [
                         'insights' => $fallbackInsights,
                         'is_fallback' => true,
-                        'message' => 'AI service unavailable. Using fallback insights.'
+                        'message' => 'AI service connection error: ' . $ce->getMessage()
                     ]
                 ]);
             }
 
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to get insights',
-                'error' => $response->body()
-            ], 503);
-
         } catch (\Exception $e) {
-            Log::error('AI Insights Error: ' . $e->getMessage());
+            // Log the detailed exception
+            Log::error('AI Insights Exception: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
             // Get some basic averages for fallback if we have them
             $user = Auth::user();
@@ -333,7 +409,7 @@ class AIController extends Controller
                 'data' => [
                     'insights' => $fallbackInsights,
                     'is_fallback' => true,
-                    'message' => 'AI service error. Using fallback insights.'
+                    'message' => 'AI service error: ' . $e->getMessage()
                 ]
             ]);
         }
