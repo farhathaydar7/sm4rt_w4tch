@@ -645,11 +645,11 @@ class AIController extends Controller
      */
     private function formatInsightsPrompt($currentMetrics, $averages)
     {
-        // Create a simplified, more compact prompt
-        $prompt = "User activity data:\n";
+        // Create a more detailed prompt for better insights
+        $prompt = "Analyze this user's health and activity data in detail:\n\n";
 
-        // Include current metrics in a compact format
-        $prompt .= "Current: ";
+        // Include current metrics with clear labels
+        $prompt .= "TODAY'S ACTIVITY:\n";
         $metricStr = [];
         foreach ($currentMetrics as $metric => $value) {
             if ($value !== null) {
@@ -659,19 +659,27 @@ class AIController extends Controller
         }
         $prompt .= implode(", ", $metricStr) . "\n";
 
-        // Include averages in a compact format
-        $prompt .= "14-day averages: ";
-        $prompt .= "steps: {$averages['avg_steps']}, ";
-        $prompt .= "active mins: {$averages['avg_active_minutes']}, ";
-        $prompt .= "distance: {$averages['avg_distance']}\n\n";
+        // Include averages with context
+        $prompt .= "\nHISTORICAL CONTEXT (14-day averages):\n";
+        $prompt .= "Average steps: {$averages['avg_steps']}\n";
+        $prompt .= "Average active minutes: {$averages['avg_active_minutes']}\n";
+        $prompt .= "Average distance: {$averages['avg_distance']} km\n\n";
 
-        $prompt .= "Analyze this data and provide insights in JSON format with these sections:\n";
-        $prompt .= "1. summary: Brief assessment of current activity vs historical patterns\n";
-        $prompt .= "2. health_impact: Potential health impacts of the activity levels\n";
-        $prompt .= "3. recommendations: Specific, actionable recommendations\n";
-        $prompt .= "4. next_steps: Immediate actions for improvement\n\n";
+        // Add health benchmarks for reference
+        $prompt .= "HEALTH BENCHMARKS:\n";
+        $prompt .= "- Recommended daily steps: 10,000 steps\n";
+        $prompt .= "- Recommended daily active minutes: 30 minutes\n";
+        $prompt .= "- Weekly active minutes target: 150 minutes\n\n";
 
-        $prompt .= "Return a clean, valid JSON object.";
+        $prompt .= "Please provide comprehensive, personalized health insights in JSON format with these sections:\n";
+        $prompt .= "1. summary: Detailed assessment comparing current activity to historical patterns and health benchmarks\n";
+        $prompt .= "2. health_impact: Analyze specific health impacts based on the activity patterns and provide at least 3 evidence-based points\n";
+        $prompt .= "3. recommendations: Provide at least 3 specific, personalized recommendations that account for the user's current activity level\n";
+        $prompt .= "4. next_steps: Suggest 3-5 immediate, actionable steps with specific metrics and timeframes\n";
+        $prompt .= "5. long_term_benefits: Explain how following these recommendations will benefit health in the long term\n\n";
+
+        $prompt .= "Your analysis should be evidence-based, detailed, and personalized to the specific activity patterns shown in the data.";
+        $prompt .= "Return a clean, valid JSON object with all these sections.";
 
         return $prompt;
     }
@@ -1010,39 +1018,34 @@ class AIController extends Controller
             $healthImpact[] = "Increasing your active minutes from $activeMinutes to at least 30 minutes daily would improve health outcomes.";
         }
 
-        // Generate recommendations
+        // Provide recommendations
         $recommendations = [];
         if ($steps < 10000) {
-            $stepIncrease = ceil((10000 - $steps) / 1000) * 1000;
-            $recommendations[] = "Aim to increase your daily steps by approximately $stepIncrease to reach the recommended 10,000 steps.";
+            $stepsToIncrease = 10000 - $steps;
+            $recommendations[] = "Aim to increase your daily steps by approximately $stepsToIncrease to reach the recommended 10,000 steps.";
+        } else {
+            $recommendations[] = "Maintain your excellent step count of $steps steps per day.";
         }
 
-        if ($activeMinutes < 30) {
-            $recommendations[] = "Try to incorporate " . (30 - $activeMinutes) . " more minutes of moderate activity into your daily routine.";
-        }
+        // Next steps
+        $nextSteps = [
+            "Take a 15-minute walk during your lunch break or after dinner.",
+            "Set a specific goal to increase your steps by 500 each day for the next week."
+        ];
 
-        if ($steps >= $avgSteps && $activeMinutes >= $avgActiveMinutes) {
-            $recommendations[] = "You're doing well compared to your average. Try to maintain this level of activity consistently.";
-        }
+        // Add long-term benefits section
+        $longTermBenefits = [
+            "Maintaining regular physical activity can reduce your risk of heart disease and stroke by up to 35%.",
+            "Consistent daily walking has been shown to improve mood and reduce symptoms of depression and anxiety.",
+            "Regular physical activity helps maintain healthy weight and reduces the risk of type 2 diabetes."
+        ];
 
-        // Generate next steps
-        $nextSteps = [];
-        if ($steps < 7500) {
-            $nextSteps[] = "Take a 15-minute walk during your lunch break or after dinner.";
-        }
-
-        if ($activeMinutes < 20) {
-            $nextSteps[] = "Schedule a 20-minute workout session tomorrow.";
-        }
-
-        $nextSteps[] = "Set a specific goal to increase your steps by 500 each day for the next week.";
-
-        // Build the complete insights object
         return [
             'summary' => $summary,
             'health_impact' => $healthImpact,
             'recommendations' => $recommendations,
-            'next_steps' => $nextSteps
+            'next_steps' => $nextSteps,
+            'long_term_benefits' => $longTermBenefits
         ];
     }
 }

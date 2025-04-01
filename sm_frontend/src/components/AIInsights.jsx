@@ -166,6 +166,23 @@ const AIInsights = ({ activityMetrics }) => {
             <p>{insights.next_steps}</p>
           ))}
       </div>
+
+      {insights.long_term_benefits && (
+        <div className={styles.insightSection}>
+          <h4>Long-term Benefits</h4>
+          {Array.isArray(insights.long_term_benefits) ? (
+            <ul className={styles.benefitsList}>
+              {insights.long_term_benefits.map((benefit, index) => (
+                <li key={index}>{benefit}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.longTermBenefits}>
+              {insights.long_term_benefits}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
