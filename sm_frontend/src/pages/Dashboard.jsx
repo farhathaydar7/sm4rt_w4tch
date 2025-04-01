@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../hooks/useAuth";
 import StatsCard from "../components/StatsCard";
+import AIInsights from "../components/AIInsights";
 import styles from "./Dashboard.module.css";
 import { activityMetrics } from "../services/api";
 import axios from "axios";
@@ -18,6 +19,7 @@ const Dashboard = () => {
   const authAttempted = useRef(false);
   const dataFetchAttempted = useRef(false);
 
+  // Hidden debug info state - can be enabled for troubleshooting
   const [debugInfo, setDebugInfo] = useState({
     authentication: null,
     requestStatus: null,
@@ -25,6 +27,9 @@ const Dashboard = () => {
     lastNetworkError: null,
     token: null,
   });
+
+  // Debug mode flag - set to false to hide debug information
+  const [showDebugMode, setShowDebugMode] = useState(false);
 
   // Debug function to show full token and headers
   const showTokenDebugInfo = () => {
@@ -242,6 +247,11 @@ const Dashboard = () => {
     window.location.reload();
   };
 
+  // Toggle debug mode
+  const toggleDebugMode = () => {
+    setShowDebugMode((prev) => !prev);
+  };
+
   if (loading) {
     return <div className={styles.loading}>Loading...</div>;
   }
@@ -254,17 +264,22 @@ const Dashboard = () => {
           <button onClick={handleRetry} className={styles.retryButton}>
             Retry
           </button>
-          <button onClick={testDirectApiCall} className={styles.testButton}>
-            Test API Connection
-          </button>
-          <button onClick={showTokenDebugInfo} className={styles.testButton}>
-            Debug Token
+          <button onClick={toggleDebugMode} className={styles.testButton}>
+            {showDebugMode ? "Hide Debug Info" : "Show Debug Info"}
           </button>
         </div>
-        <div className={styles.debugInfo}>
-          <h3>Debug Information:</h3>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
+        {showDebugMode && (
+          <div className={styles.debugInfo}>
+            <h3>Debug Information:</h3>
+            <button onClick={testDirectApiCall} className={styles.testButton}>
+              Test API Connection
+            </button>
+            <button onClick={showTokenDebugInfo} className={styles.testButton}>
+              Debug Token
+            </button>
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
+        )}
       </div>
     );
   }
@@ -316,12 +331,25 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className={styles.debugInfo}>
-        <h3>Debug Information:</h3>
-        <button onClick={testDirectApiCall} className={styles.testButton}>
-          Test API Connection
+      {/* AI Insights Component */}
+      <div className={styles.insightsSection}>
+        <AIInsights activityMetrics={metrics.daily} />
+      </div>
+
+      {showDebugMode && (
+        <div className={styles.debugInfo}>
+          <h3>Debug Information:</h3>
+          <button onClick={testDirectApiCall} className={styles.testButton}>
+            Test API Connection
+          </button>
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
+      )}
+
+      <div className={styles.footer}>
+        <button onClick={toggleDebugMode} className={styles.debugToggle}>
+          {showDebugMode ? "Hide Debug Mode" : "Enable Debug Mode"}
         </button>
-        <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
       </div>
     </div>
   );

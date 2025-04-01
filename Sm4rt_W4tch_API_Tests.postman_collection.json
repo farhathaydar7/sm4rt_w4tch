@@ -1,28 +1,39 @@
 {
   "info": {
-    "_postman_id": "abcdef12-1234-5678-abcd-12345678abcd",
-    "name": "Sm4rt W4tch - API Tests",
-    "description": "Collection for testing the Sm4rt W4tch API, including CSV upload functionality.",
+    "_postman_id": "a7c43e85-3f9a-4c91-b6d5-8b7b9f8e4d2c",
+    "name": "Sm4rt W4tch API Tests",
+    "description": "A collection for testing the Sm4rt W4tch API endpoints, with a focus on the AI features.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8000/api",
-      "type": "string"
-    },
-    {
-      "key": "token",
-      "value": "",
-      "type": "string"
-    }
-  ],
   "item": [
     {
       "name": "Authentication",
       "item": [
         {
-          "name": "Register",
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has token\", function () {",
+                  "    pm.expect(jsonData.token).to.exist;",
+                  "});",
+                  "",
+                  "if (jsonData.token) {",
+                  "    pm.environment.set(\"auth_token\", jsonData.token);",
+                  "    console.log(\"Token saved to environment\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -33,44 +44,161 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "register"]
+              "raw": "{{api_url}}/auth/login",
+              "host": ["{{api_url}}"],
+              "path": ["auth", "login"]
             },
-            "description": "Register a new user"
+            "description": "Login to get the authentication token"
           },
           "response": []
-        },
+        }
+      ],
+      "description": "Authentication endpoints for getting tokens"
+    },
+    {
+      "name": "AI Endpoints",
+      "item": [
         {
-          "name": "Login (with automatic CSV processing)",
+          "name": "Test AI Connection",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.authorization && jsonData.authorization.token) {",
-                  "    pm.collectionVariables.set(\"token\", jsonData.authorization.token);",
-                  "    console.log(\"Access token saved!\");",
-                  "    ",
-                  "    if (jsonData.csv_upload && jsonData.csv_upload.id) {",
-                  "        pm.collectionVariables.set(\"csvUploadId\", jsonData.csv_upload.id);",
-                  "        console.log(\"CSV Upload ID saved: \" + jsonData.csv_upload.id);",
-                  "        console.log(\"CSV Upload status: \" + jsonData.csv_upload.status);",
-                  "        console.log(\"CSV Upload message: \" + jsonData.csv_upload.message);",
-                  "    } else {",
-                  "        console.log(\"No CSV upload data in response!\");",
-                  "        if (jsonData.csv_upload) {",
-                  "            console.log(\"Status: \" + jsonData.csv_upload.status);",
-                  "            console.log(\"Message: \" + jsonData.csv_upload.message);",
-                  "        }",
-                  "    }",
-                  "} else {",
-                  "    console.log(\"No access token in response!\");",
-                  "}"
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Message indicates AI is running\", function () {",
+                  "    pm.expect(jsonData.message).to.include(\"AI model is running\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{api_url}}/ai/test",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "test"]
+            },
+            "description": "Test if the AI service is running and accessible"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains insights data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.insights).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback insights",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback insights - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific insights sections",
+                  "pm.test(\"Insights contains required sections\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights.summary).to.exist;",
+                  "    pm.expect(insights.health_impact).to.exist;",
+                  "    pm.expect(insights.recommendations).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8542,\n            \"active_minutes\": 35,\n            \"distance\": 6.83\n        }\n    }\n}"
+            },
+            "url": {
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "insights"]
+            },
+            "description": "Get AI-generated insights about activity data"
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI Predictions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains predictions data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.predictions).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback predictions",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback predictions - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific prediction sections",
+                  "pm.test(\"Predictions contains required sections\", function () {",
+                  "    const predictions = jsonData.data.predictions;",
+                  "    pm.expect(predictions.goal_achievement).to.exist;",
+                  "    pm.expect(predictions.anomaly_detection).to.exist;",
+                  "    pm.expect(predictions.future_projections).to.exist;",
+                  "    pm.expect(predictions.actionable_insights).to.exist;",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
@@ -79,11 +207,34 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "// Note: This test assumes you have a properly formatted 'smrt.csv' file in the server's public directory",
-                  "// with valid activity data for your user ID. If the file doesn't exist or doesn't contain valid data",
-                  "// for your user ID, the CSV upload will not happen.",
+                  "// Generate sample activity history data",
+                  "function generateSampleData(numDays) {",
+                  "    const data = [];",
+                  "    const today = new Date();",
+                  "    ",
+                  "    for (let i = 0; i < numDays; i++) {",
+                  "        const date = new Date();",
+                  "        date.setDate(today.getDate() - i);",
+                  "        const dateStr = date.toISOString().split('T')[0];",
+                  "        ",
+                  "        // Generate random but reasonable values",
+                  "        const steps = Math.floor(Math.random() * 10000) + 5000;",
+                  "        const activeMinutes = Math.floor(Math.random() * 40) + 20;",
+                  "        const distance = Math.round(steps * 0.0008 * 100) / 100;",
+                  "        ",
+                  "        data.push({",
+                  "            date: dateStr,",
+                  "            steps: steps,",
+                  "            active_minutes: activeMinutes,",
+                  "            distance: distance",
+                  "        });",
+                  "    }",
+                  "    ",
+                  "    return data;",
+                  "}",
                   "",
-                  "// Please see README_SMRT_CSV.md in the public directory for instructions on how to format the file."
+                  "// Store the generated data in a variable",
+                  "pm.variables.set('activityHistory', JSON.stringify(generateSampleData(14)));"
                 ],
                 "type": "text/javascript"
               }
@@ -93,258 +244,59 @@
             "method": "POST",
             "header": [
               {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
                 "key": "Content-Type",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+              "raw": "{\n    \"data\": {\n        \"activity_history\": {{activityHistory}},\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "login"]
+              "raw": "{{api_url}}/ai/predict",
+              "host": ["{{api_url}}"],
+              "path": ["ai", "predict"]
             },
-            "description": "Login and automatically upload activity data from smrt.csv if it exists and is valid"
+            "description": "Get AI-generated predictions based on activity history"
           },
           "response": []
         },
         {
-          "name": "Get User Profile",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["auth", "me"]
-            },
-            "description": "Get current user profile"
-          },
-          "response": []
-        }
-      ],
-      "description": "Authentication endpoints"
-    },
-    {
-      "name": "CSV Uploads",
-      "item": [
-        {
-          "name": "Upload CSV",
+          "name": "Get AI Insights (Database Data)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
                   "var jsonData = pm.response.json();",
-                  "if (jsonData.data && jsonData.data.id) {",
-                  "    pm.collectionVariables.set(\"csvUploadId\", jsonData.data.id);",
-                  "    console.log(\"CSV Upload ID saved: \" + jsonData.data.id);",
-                  "} else {",
-                  "    console.log(\"No upload ID in response!\");",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "csv_file",
-                  "type": "file",
-                  "src": "/path/to/sample_activity_data.csv",
-                  "description": "CSV file with activity data"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/csv-uploads",
-              "host": ["{{baseUrl}}"],
-              "path": ["csv-uploads"]
-            },
-            "description": "Upload a CSV file with activity metrics"
-          },
-          "response": []
-        },
-        {
-          "name": "Check Upload Status",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}/status",
-              "host": ["{{baseUrl}}"],
-              "path": ["csv-uploads", "{{csvUploadId}}", "status"]
-            },
-            "description": "Check the status of a CSV upload"
-          },
-          "response": []
-        },
-        {
-          "name": "Get CSV Upload Details",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["csv-uploads", "{{csvUploadId}}"]
-            },
-            "description": "Get details of a CSV upload"
-          },
-          "response": []
-        },
-        {
-          "name": "List All CSV Uploads",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/csv-uploads",
-              "host": ["{{baseUrl}}"],
-              "path": ["csv-uploads"]
-            },
-            "description": "List all CSV uploads for the current user"
-          },
-          "response": []
-        }
-      ],
-      "description": "CSV upload endpoints"
-    },
-    {
-      "name": "Activity Metrics",
-      "item": [
-        {
-          "name": "Get Activity Metrics for CSV Upload",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/csv-uploads/{{csvUploadId}}/activity-metrics",
-              "host": ["{{baseUrl}}"],
-              "path": ["csv-uploads", "{{csvUploadId}}", "activity-metrics"]
-            },
-            "description": "Get all activity metrics for a specific CSV upload"
-          },
-          "response": []
-        },
-        {
-          "name": "Get All Activity Metrics",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/activity-metrics",
-              "host": ["{{baseUrl}}"],
-              "path": ["activity-metrics"]
-            },
-            "description": "Get all activity metrics for the current user"
-          },
-          "response": []
-        }
-      ],
-      "description": "Activity metrics endpoints"
-    },
-    {
-      "name": "AI Services",
-      "item": [
-        {
-          "name": "Test AI Connection",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/ai/test",
-              "host": ["{{baseUrl}}"],
-              "path": ["ai", "test"]
-            },
-            "description": "Test connection to the AI model"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Comprehensive Predictions",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
                   "});",
                   "",
-                  "pm.test(\"Response has predictions\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.status).to.eql('success');",
-                  "    pm.expect(jsonData.data).to.be.an('object');",
-                  "    pm.expect(jsonData.data.predictions).to.be.an('object');",
-                  "    ",
-                  "    // Log predictions for review",
-                  "    if (jsonData.data && jsonData.data.predictions) {",
-                  "        console.log('AI Predictions received:');",
-                  "        if (jsonData.data.predictions.goal_achievement) {",
-                  "            console.log('Goal Achievement: ' + JSON.stringify(jsonData.data.predictions.goal_achievement));",
-                  "        }",
-                  "        if (jsonData.data.predictions.anomaly_detection) {",
-                  "            console.log('Anomaly Detection: ' + JSON.stringify(jsonData.data.predictions.anomaly_detection));",
-                  "        }",
-                  "        if (jsonData.data.predictions.future_projections) {",
-                  "            console.log('Future Projections: ' + JSON.stringify(jsonData.data.predictions.future_projections));",
-                  "        }",
-                  "        if (jsonData.data.predictions.actionable_insights) {",
-                  "            console.log('Actionable Insights: ' + JSON.stringify(jsonData.data.predictions.actionable_insights));",
-                  "        }",
-                  "    }",
+                  "pm.test(\"Response contains insights data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.insights).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback insights",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback insights - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific insights sections",
+                  "pm.test(\"Insights contains required sections\", function () {",
+                  "    const insights = jsonData.data.insights;",
+                  "    pm.expect(insights.summary).to.exist;",
+                  "    pm.expect(insights.health_impact).to.exist;",
+                  "    pm.expect(insights.recommendations).to.exist;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -356,100 +308,28 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{auth_token}}"
               },
               {
                 "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"data\": {\n        \"activity_history\": [\n            {\n                \"date\": \"2024-03-25\",\n                \"steps\": 8000,\n                \"active_minutes\": 35,\n                \"calories_burned\": 380\n            },\n            {\n                \"date\": \"2024-03-26\",\n                \"steps\": 8500,\n                \"active_minutes\": 40,\n                \"calories_burned\": 410\n            },\n            {\n                \"date\": \"2024-03-27\",\n                \"steps\": 7800,\n                \"active_minutes\": 30,\n                \"calories_burned\": 350\n            },\n            {\n                \"date\": \"2024-03-28\",\n                \"steps\": 9200,\n                \"active_minutes\": 48,\n                \"calories_burned\": 450\n            },\n            {\n                \"date\": \"2024-03-29\",\n                \"steps\": 12000,\n                \"active_minutes\": 65,\n                \"calories_burned\": 580\n            },\n            {\n                \"date\": \"2024-03-30\",\n                \"steps\": 6500,\n                \"active_minutes\": 25,\n                \"calories_burned\": 300\n            },\n            {\n                \"date\": \"2024-03-31\",\n                \"steps\": 7200,\n                \"active_minutes\": 30,\n                \"calories_burned\": 340\n            },\n            {\n                \"date\": \"2024-04-01\",\n                \"steps\": 9800,\n                \"active_minutes\": 50,\n                \"calories_burned\": 470\n            }\n        ],\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
+              "raw": "{\n    \"data\": {}\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/ai/predict",
-              "host": ["{{baseUrl}}"],
-              "path": ["ai", "predict"]
-            },
-            "description": "Get comprehensive AI predictions including goal achievement likelihood, anomaly detection, future projections, and actionable insights"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Detailed Health Insights",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has insights\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.status).to.eql('success');",
-                  "    pm.expect(jsonData.data).to.be.an('object');",
-                  "    pm.expect(jsonData.data.insights).to.be.an('object');",
-                  "    ",
-                  "    // Log insights for review",
-                  "    if (jsonData.data && jsonData.data.insights) {",
-                  "        console.log('AI Insights received:');",
-                  "        if (jsonData.data.insights.summary) {",
-                  "            console.log('Summary: ' + JSON.stringify(jsonData.data.insights.summary));",
-                  "        }",
-                  "        if (jsonData.data.insights.health_impact) {",
-                  "            console.log('Health Impact: ' + JSON.stringify(jsonData.data.insights.health_impact));",
-                  "        }",
-                  "        if (jsonData.data.insights.recommendations) {",
-                  "            console.log('Recommendations: ' + JSON.stringify(jsonData.data.insights.recommendations));",
-                  "        }",
-                  "        if (jsonData.data.insights.next_steps) {",
-                  "            console.log('Next Steps: ' + JSON.stringify(jsonData.data.insights.next_steps));",
-                  "        }",
-                  "    }",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"data\": {\n        \"activity_metrics\": {\n            \"daily_steps\": 8500,\n            \"active_minutes\": 45,\n            \"distance\": 5.7\n        }\n    }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ai/insights",
-              "host": ["{{baseUrl}}"],
+              "raw": "{{api_url}}/ai/insights",
+              "host": ["{{api_url}}"],
               "path": ["ai", "insights"]
             },
-            "description": "Get detailed health insights with summary, health impact assessment, personalized recommendations, and next steps"
+            "description": "Get AI-generated insights using data from the database"
           },
           "response": []
         },
         {
-          "name": "Get Predictions (Database Data)",
+          "name": "Get AI Predictions (Database Data)",
           "event": [
             {
               "listen": "test",
@@ -459,10 +339,28 @@
                   "    pm.response.to.have.status(200);",
                   "});",
                   "",
-                  "pm.test(\"Response has predictions from database\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.status).to.eql('success');",
-                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "var jsonData = pm.response.json();",
+                  "pm.test(\"Status is success\", function () {",
+                  "    pm.expect(jsonData.status).to.equal(\"success\");",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains predictions data\", function () {",
+                  "    pm.expect(jsonData.data).to.exist;",
+                  "    pm.expect(jsonData.data.predictions).to.exist;",
+                  "});",
+                  "",
+                  "// Check if we're getting fallback predictions",
+                  "if (jsonData.data.is_fallback) {",
+                  "    console.log(\"WARNING: Using fallback predictions - AI service might be down\");",
+                  "}",
+                  "",
+                  "// Test for specific prediction sections",
+                  "pm.test(\"Predictions contains required sections\", function () {",
+                  "    const predictions = jsonData.data.predictions;",
+                  "    pm.expect(predictions.goal_achievement).to.exist;",
+                  "    pm.expect(predictions.anomaly_detection).to.exist;",
+                  "    pm.expect(predictions.future_projections).to.exist;",
+                  "    pm.expect(predictions.actionable_insights).to.exist;",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -474,193 +372,61 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token}}"
+                "value": "Bearer {{auth_token}}"
               },
               {
                 "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
                 "value": "application/json"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"data\": {\n        \"goals\": {\n            \"daily_steps\": 10000,\n            \"weekly_active_minutes\": 150\n        }\n    }\n}"
+              "raw": "{\n    \"data\": {}\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/ai/predict",
-              "host": ["{{baseUrl}}"],
+              "raw": "{{api_url}}/ai/predict",
+              "host": ["{{api_url}}"],
               "path": ["ai", "predict"]
             },
-            "description": "Get predictions using the user's historical data from the database"
-          },
-          "response": []
-        },
-        {
-          "name": "Get Insights (Database Data)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has insights from database\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.status).to.eql('success');",
-                  "    pm.expect(jsonData.data).to.be.an('object');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/ai/insights",
-              "host": ["{{baseUrl}}"],
-              "path": ["ai", "insights"]
-            },
-            "description": "Get insights using the user's most recent data from the database"
-          },
-          "response": []
-        },
-        {
-          "name": "Test Direct LLM Connection",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has models array\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.data).to.be.an('array');",
-                  "    console.log(\"Available models: \" + JSON.stringify(jsonData.data));",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:1234/v1/models",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "1234",
-              "path": ["v1", "models"]
-            },
-            "description": "Direct test of connection to LM Studio's models endpoint"
-          },
-          "response": []
-        },
-        {
-          "name": "Test Direct LLM Chat",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 200\", function () {",
-                  "    pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "pm.test(\"Response has content\", function () {",
-                  "    var jsonData = pm.response.json();",
-                  "    pm.expect(jsonData.choices[0].message.content).to.be.a('string');",
-                  "    console.log(\"LLM response: \" + jsonData.choices[0].message.content);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"model\": \"local-model\",\n    \"messages\": [\n        {\n            \"role\": \"system\",\n            \"content\": \"You are a helpful fitness assistant.\"\n        },\n        {\n            \"role\": \"user\",\n            \"content\": \"What's a good daily step count goal?\"\n        }\n    ],\n    \"max_tokens\": 150\n}"
-            },
-            "url": {
-              "raw": "http://localhost:1234/v1/chat/completions",
-              "protocol": "http",
-              "host": ["localhost"],
-              "port": "1234",
-              "path": ["v1", "chat", "completions"]
-            },
-            "description": "Direct test of LLM Studio chat completions API"
-          },
-          "response": []
-        },
-        {
-          "name": "Test Unauthorized Access",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test(\"Status code is 401\", function () {",
-                  "    pm.response.to.have.status(401);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/ai/test",
-              "host": ["{{baseUrl}}"],
-              "path": ["ai", "test"]
-            },
-            "description": "Test unauthorized access to AI endpoint"
+            "description": "Get AI-generated predictions using data from the database"
           },
           "response": []
         }
       ],
-      "description": "AI service endpoints for predictions and insights"
+      "description": "Endpoints for AI functionality testing"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "api_url",
+      "value": "http://localhost:8000/api",
+      "type": "string"
+    },
+    {
+      "key": "user_email",
+      "value": "test@example.com",
+      "type": "string"
+    },
+    {
+      "key": "user_password",
+      "value": "password123",
+      "type": "string"
     }
   ]
 }

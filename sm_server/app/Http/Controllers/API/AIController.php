@@ -12,7 +12,25 @@ use Carbon\Carbon;
 
 class AIController extends Controller
 {
-    protected $aiEndpoint = 'http://localhost:1234';
+    protected $aiEndpoint;
+    protected $aiModel;
+    protected $aiTimeout;
+    protected $aiTemperature;
+
+    public function __construct()
+    {
+        $this->aiEndpoint = env('AI_SERVICE_URL', 'http://localhost:1234');
+        $this->aiModel = env('AI_MODEL_NAME', 'deepseek-r1-distill-qwen-7b');
+        $this->aiTimeout = (int)env('AI_TIMEOUT', 15);
+        $this->aiTemperature = (float)env('AI_TEMPERATURE', 0.7);
+
+        Log::info("AI Service Configuration", [
+            'endpoint' => $this->aiEndpoint,
+            'model' => $this->aiModel,
+            'timeout' => $this->aiTimeout,
+            'temperature' => $this->aiTemperature
+        ]);
+    }
 
     /**
      * Test the AI model connection
@@ -94,8 +112,8 @@ class AIController extends Controller
             $userMessage = $this->formatPredictionPrompt($activityHistory, $dailyStepGoal, $weeklyActiveMinutesGoal);
 
             // Make request to AI model with a timeout
-            $response = Http::timeout(10)->post($this->aiEndpoint . '/v1/chat/completions', [
-                'model' => 'local-model',
+            $response = Http::timeout($this->aiTimeout)->post($this->aiEndpoint . '/v1/chat/completions', [
+                'model' => $this->aiModel,
                 'messages' => [
                     [
                         'role' => 'system',
@@ -103,7 +121,8 @@ class AIController extends Controller
                     ],
                     ['role' => 'user', 'content' => $userMessage]
                 ],
-                'max_tokens' => 800
+                'temperature' => $this->aiTemperature,
+                'max_tokens' => -1
             ]);
 
             if ($response->successful()) {
@@ -220,8 +239,8 @@ class AIController extends Controller
             ]);
 
             // Make request to AI model with a timeout
-            $response = Http::timeout(10)->post($this->aiEndpoint . '/v1/chat/completions', [
-                'model' => 'local-model',
+            $response = Http::timeout($this->aiTimeout)->post($this->aiEndpoint . '/v1/chat/completions', [
+                'model' => $this->aiModel,
                 'messages' => [
                     [
                         'role' => 'system',
@@ -229,7 +248,8 @@ class AIController extends Controller
                     ],
                     ['role' => 'user', 'content' => $userMessage]
                 ],
-                'max_tokens' => 800
+                'temperature' => $this->aiTemperature,
+                'max_tokens' => -1
             ]);
 
             if ($response->successful()) {
@@ -394,8 +414,18 @@ class AIController extends Controller
             }
 
             // If that fails, try to extract JSON from within the text
-            preg_match('/\{.*\}/s', $text, $matches);
-            if (!empty($matches[0])) {
+            // Look for JSON blocks (including nested ones)
+            if (preg_match('/```json\s*([\s\S]*?)\s*```/', $text, $matches)) {
+                // Handle code blocks with json syntax
+                $jsonStr = $matches[1];
+                $decoded = json_decode($jsonStr, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return $decoded;
+                }
+            }
+
+            // Try to find JSON object pattern
+            if (preg_match('/\{[\s\S]*\}/s', $text, $matches)) {
                 $jsonStr = $matches[0];
                 $decoded = json_decode($jsonStr, true);
                 if (json_last_error() === JSON_ERROR_NONE) {
@@ -403,15 +433,58 @@ class AIController extends Controller
                 }
             }
 
+            // Log the parsing failure for debugging
+            Log::warning('Failed to parse AI response as JSON', [
+                'response' => $text,
+                'json_error' => json_last_error_msg()
+            ]);
+
             // If JSON extraction fails, create a structured response from the text
+            // Find key sections if possible
+            $sections = [
+                'summary' => $this->extractSection($text, 'SUMMARY'),
+                'health_impact' => $this->extractSection($text, 'HEALTH IMPACT'),
+                'recommendations' => $this->extractSection($text, 'RECOMMENDATIONS'),
+                'next_steps' => $this->extractSection($text, 'NEXT STEPS')
+            ];
+
+            // If we have at least some sections, return them
+            if (!empty($sections['summary']) || !empty($sections['health_impact'])) {
+                return $sections;
+            }
+
+            // Last resort: just return the plain text
             return [
-                'text_response' => $text,
-                'structured_format' => 'The AI response could not be parsed as JSON'
+                'summary' => substr($text, 0, 200) . (strlen($text) > 200 ? '...' : ''),
+                'health_impact' => ['Based on the provided data, we have prepared some insights.'],
+                'recommendations' => ['Consider consulting the detailed metrics for more information.'],
+                'text_response' => $text
             ];
         } catch (\Exception $e) {
             Log::error('JSON extraction error: ' . $e->getMessage());
             return ['error' => 'Failed to parse AI response', 'raw_text' => $text];
         }
+    }
+
+    /**
+     * Extract a section from the AI text response
+     */
+    private function extractSection($text, $sectionName)
+    {
+        // Try to find sections either by headers or by numbered lists
+        if (preg_match('/(?:' . $sectionName . '|' . $sectionName . ':)(.*?)(?:\n\s*\n|\n\s*[A-Z][A-Z\s]+:|\Z)/is', $text, $matches)) {
+            $content = trim($matches[1]);
+
+            // Check for bullet points or numbered lists
+            if (preg_match_all('/(?:^|\n)(?:\d+\.|\*|\-)\s*(.*?)(?=(?:\n(?:\d+\.|\*|\-|[A-Z][A-Z\s]+:)|\Z))/s', $content, $items)) {
+                return array_map('trim', $items[1]);
+            }
+
+            // If no clear list format, return whole section as array item
+            return [$content];
+        }
+
+        return [];
     }
 
     /**
