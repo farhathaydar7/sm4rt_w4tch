@@ -380,7 +380,7 @@ class AIController extends Controller
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'You are a health analytics AI that provides personalized, actionable health insights. Structure your response in JSON format with specific recommendations.'
+                        'content' => $this->getSystemMessage()
                     ],
                     ['role' => 'user', 'content' => $userMessage]
                 ],
@@ -646,7 +646,7 @@ class AIController extends Controller
     private function formatInsightsPrompt($currentMetrics, $averages)
     {
         // Create a more detailed prompt for better insights
-        $prompt = "Analyze this user's health and activity data in detail:\n\n";
+        $prompt = "Analyze this user's health and activity data to provide health insights:\n\n";
 
         // Include current metrics with clear labels
         $prompt .= "TODAY'S ACTIVITY:\n";
@@ -671,15 +671,61 @@ class AIController extends Controller
         $prompt .= "- Recommended daily active minutes: 30 minutes\n";
         $prompt .= "- Weekly active minutes target: 150 minutes\n\n";
 
-        $prompt .= "Please provide comprehensive, personalized health insights in JSON format with these sections:\n";
-        $prompt .= "1. summary: Detailed assessment comparing current activity to historical patterns and health benchmarks\n";
-        $prompt .= "2. health_impact: Analyze specific health impacts based on the activity patterns and provide at least 3 evidence-based points\n";
-        $prompt .= "3. recommendations: Provide at least 3 specific, personalized recommendations that account for the user's current activity level\n";
-        $prompt .= "4. next_steps: Suggest 3-5 immediate, actionable steps with specific metrics and timeframes\n";
-        $prompt .= "5. long_term_benefits: Explain how following these recommendations will benefit health in the long term\n\n";
+        $prompt .= "RESPONSE FORMAT INSTRUCTIONS:\n";
+        $prompt .= "1. Return ONLY a valid JSON object with no surrounding markdown code blocks or commentary\n";
+        $prompt .= "2. Use only standard JSON syntax - NO Python f-strings or any templated strings\n";
+        $prompt .= "3. DO NOT use ellipsis (...) or abbreviations to truncate content\n";
+        $prompt .= "4. Ensure all JSON is properly structured with matching brackets and quotes\n";
+        $prompt .= "5. Always use double quotes for strings and keys as per JSON standard\n";
+        $prompt .= "6. Follow this exact structure with these exact key names:\n\n";
 
-        $prompt .= "Your analysis should be evidence-based, detailed, and personalized to the specific activity patterns shown in the data.";
-        $prompt .= "Return a clean, valid JSON object with all these sections.";
+        $prompt .= "{\n";
+        $prompt .= "  \"summary\": {\n";
+        $prompt .= "    \"current_activity\": {\n";
+        $prompt .= "      \"steps\": 0,\n";
+        $prompt .= "      \"active_minutes\": 0,\n";
+        $prompt .= "      \"distance\": 0\n";
+        $prompt .= "    },\n";
+        $prompt .= "    \"historical_context\": {\n";
+        $prompt .= "      \"average_steps\": 0,\n";
+        $prompt .= "      \"average_active_minutes\": 0,\n";
+        $prompt .= "      \"average_distance\": 0\n";
+        $prompt .= "    },\n";
+        $prompt .= "    \"health_benchmarks\": {\n";
+        $prompt .= "      \"recommended_daily_steps\": 10000,\n";
+        $prompt .= "      \"recommended_daily_active_minutes\": 30,\n";
+        $prompt .= "      \"weekly_target\": 150\n";
+        $prompt .= "    },\n";
+        $prompt .= "    \"assessment\": \"A string describing the user's current activity compared to their average and health benchmarks\"\n";
+        $prompt .= "  },\n";
+        $prompt .= "  \"health_impact\": [\n";
+        $prompt .= "    {\n";
+        $prompt .= "      \"title\": \"Impact point title\",\n";
+        $prompt .= "      \"description\": \"Detailed description of health impact\"\n";
+        $prompt .= "    }\n";
+        $prompt .= "  ],\n";
+        $prompt .= "  \"recommendations\": [\n";
+        $prompt .= "    {\n";
+        $prompt .= "      \"title\": \"Recommendation title\",\n";
+        $prompt .= "      \"description\": \"Detailed description of recommendation\"\n";
+        $prompt .= "    }\n";
+        $prompt .= "  ],\n";
+        $prompt .= "  \"next_steps\": [\n";
+        $prompt .= "    {\n";
+        $prompt .= "      \"action\": \"Specific action to take\",\n";
+        $prompt .= "      \"timeframe\": \"When to do it\",\n";
+        $prompt .= "      \"target\": \"Measurable target\"\n";
+        $prompt .= "    }\n";
+        $prompt .= "  ],\n";
+        $prompt .= "  \"long_term_benefits\": [\n";
+        $prompt .= "    {\n";
+        $prompt .= "      \"benefit\": \"Long-term benefit title\",\n";
+        $prompt .= "      \"description\": \"Detailed description of long-term benefit\"\n";
+        $prompt .= "    }\n";
+        $prompt .= "  ]\n";
+        $prompt .= "}\n\n";
+
+        $prompt .= "Analyze the data provided and fill in this exact JSON structure with your insights. Do not add any text before or after the JSON.";
 
         return $prompt;
     }
@@ -1047,5 +1093,13 @@ class AIController extends Controller
             'next_steps' => $nextSteps,
             'long_term_benefits' => $longTermBenefits
         ];
+    }
+
+    /**
+     * Get the system message for AI interactions
+     */
+    private function getSystemMessage()
+    {
+        return 'You are a health analytics AI that provides personalized, actionable health insights. You MUST structure your response as a valid JSON object WITHOUT any surrounding text, markdown code blocks, or commentary. Follow the structure specified in the prompt exactly. Never use Python f-strings, templates, variable interpolation, or any non-JSON syntax. Never truncate your response with ellipsis or incomplete entries.';
     }
 }

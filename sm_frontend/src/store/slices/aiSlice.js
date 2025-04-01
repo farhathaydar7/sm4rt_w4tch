@@ -32,13 +32,59 @@ export const getAIPredictions = createAsyncThunk(
 
 export const getAIInsights = createAsyncThunk(
   "ai/getInsights",
-  async (data = {}, { rejectWithValue }) => {
+  async (data = {}, { rejectWithValue, signal }) => {
+    // Create an AbortController that will be cancelled if Redux cancels this thunk
+    const abortController = new AbortController();
+
+    // If the thunk is aborted, abort our fetch as well
+    signal.addEventListener("abort", () => {
+      abortController.abort();
+    });
+
     try {
-      const response = await api.post("/ai/insights", { data });
+      // Set a timeout for the request (45 seconds)
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, 45000);
+
+      const response = await api.postWithSignal(
+        "/ai/insights",
+        { data },
+        { signal: abortController.signal }
+      );
+
+      // Clear the timeout if the request completes successfully
+      clearTimeout(timeoutId);
+
       return response.data;
     } catch (error) {
+      console.log("AI Insights error:", error.name, error.message);
+
+      // Handle abort errors specifically
+      if (
+        error.name === "AbortError" ||
+        error.name === "CanceledError" ||
+        error.message?.includes("abort") ||
+        error.message?.includes("cancel")
+      ) {
+        return rejectWithValue({
+          message:
+            "Request was cancelled. The AI service may be taking too long to respond.",
+        });
+      }
+
+      // Handle network errors
+      if (!navigator.onLine) {
+        return rejectWithValue({
+          message:
+            "You appear to be offline. Please check your internet connection.",
+        });
+      }
+
       return rejectWithValue(
-        error.response?.data || { message: "Failed to get AI insights" }
+        error.response?.data || {
+          message: `Failed to get AI insights: ${error.message}`,
+        }
       );
     }
   }

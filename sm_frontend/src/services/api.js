@@ -8,8 +8,18 @@ const api = axios.create({
     Accept: "application/json",
   },
   withCredentials: true, // Important for cookies if using cookie auth
-  timeout: 10000, // Add a timeout to prevent hanging requests
+  timeout: 60000, // Increase timeout to 60 seconds for AI operations
 });
+
+// Modified post method to accept AbortController signal
+api.postWithSignal = function (url, data = {}, options = {}) {
+  const { signal, ...otherOptions } = options;
+
+  return this.post(url, data, {
+    ...otherOptions,
+    signal: signal,
+  });
+};
 
 // For development debugging
 const isDevelopment =
