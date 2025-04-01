@@ -107,9 +107,9 @@ if ($error) {
 } else {
     echo "✅ SUCCESS: Models endpoint is accessible\n";
     $models = json_decode($response, true);
-    if (is_array($models) && count($models) > 0) {
+    if (is_array($models) && isset($models['data']) && is_array($models['data'])) {
         echo "Available models:\n";
-        foreach ($models as $model) {
+        foreach ($models['data'] as $model) {
             if (isset($model['id'])) {
                 echo "  - " . $model['id'] . "\n";
             }
@@ -117,7 +117,7 @@ if ($error) {
 
         // Check if our model exists
         $modelExists = false;
-        foreach ($models as $model) {
+        foreach ($models['data'] as $model) {
             if (isset($model['id']) && $model['id'] === $aiModel) {
                 $modelExists = true;
                 break;
@@ -130,7 +130,7 @@ if ($error) {
             echo "\n⚠️ Warning: The model '$aiModel' was not found in the list of available models.\n";
             echo "Available models are: ";
             $modelNames = [];
-            foreach ($models as $model) {
+            foreach ($models['data'] as $model) {
                 if (isset($model['id'])) {
                     $modelNames[] = $model['id'];
                 }
@@ -139,8 +139,7 @@ if ($error) {
             echo "You should update your .env file to use one of these models.\n";
         }
     } else {
-        echo "No models or unexpected format returned\n";
-        echo "Response: " . $response . "\n";
+        echo "Response structure: " . print_r($models, true) . "\n";
     }
 }
 

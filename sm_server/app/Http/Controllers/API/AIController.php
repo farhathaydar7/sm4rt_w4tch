@@ -21,7 +21,7 @@ class AIController extends Controller
     {
         $this->aiEndpoint = env('AI_SERVICE_URL', 'http://localhost:1234');
         $this->aiModel = env('AI_MODEL_NAME', 'deepseek-r1-distill-qwen-7b');
-        $this->aiTimeout = (int)env('AI_TIMEOUT', 15);
+        $this->aiTimeout = (int)env('AI_TIMEOUT', 8);
         $this->aiTemperature = (float)env('AI_TEMPERATURE', 0.7);
 
         Log::info("AI Service Configuration", [
@@ -38,16 +38,43 @@ class AIController extends Controller
     public function testConnection()
     {
         try {
-            // LM Studio API uses /v1/models for checking health
-            $response = Http::get($this->aiEndpoint . '/v1/models');
+            Log::info("Testing AI connection to: {$this->aiEndpoint}/v1/models");
+
+            // Use a shorter timeout for connection testing
+            $response = Http::timeout(5)
+                ->get($this->aiEndpoint . '/v1/models');
 
             if ($response->successful()) {
+                // Check if our model exists
+                $models = $response->json();
+                $modelExists = false;
+
+                if (isset($models['data']) && is_array($models['data'])) {
+                    foreach ($models['data'] as $model) {
+                        if (isset($model['id']) && $model['id'] === $this->aiModel) {
+                            $modelExists = true;
+                            break;
+                        }
+                    }
+                }
+
+                Log::info("AI connection test successful", [
+                    'model_exists' => $modelExists ? 'yes' : 'no',
+                    'response_status' => $response->status()
+                ]);
+
                 return response()->json([
                     'status' => 'success',
                     'message' => 'AI model is running',
+                    'model_available' => $modelExists,
                     'data' => $response->json()
                 ]);
             }
+
+            Log::warning("AI model not responding", [
+                'status_code' => $response->status(),
+                'response' => $response->body()
+            ]);
 
             return response()->json([
                 'status' => 'error',
@@ -56,7 +83,13 @@ class AIController extends Controller
             ], 503);
 
         } catch (\Exception $e) {
-            Log::error('AI Model Connection Error: ' . $e->getMessage());
+            Log::error('AI Model Connection Error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Failed to connect to AI model',
@@ -198,6 +231,12 @@ class AIController extends Controller
             // Get activity metrics from request
             $activityMetrics = $request->input('data.activity_metrics', []);
 
+            // Debug the incoming activity metrics
+            Log::debug('Incoming Activity Metrics:', [
+                'raw_metrics' => $activityMetrics,
+                'type' => gettype($activityMetrics)
+            ]);
+
             // If no metrics are provided, try to get recent data from the database
             if (empty($activityMetrics)) {
                 $user = Auth::user();
@@ -264,6 +303,13 @@ class AIController extends Controller
 
             // Make request to AI model with a timeout
             try {
+                // Log that we're about to make the request
+                Log::info("Making AI request to {$this->aiEndpoint}/v1/chat/completions", [
+                    'model' => $this->aiModel,
+                    'prompt_length' => strlen($userMessage),
+                    'timeout' => $this->aiTimeout
+                ]);
+
                 $response = Http::timeout($this->aiTimeout)
                     ->withHeaders([
                         'Content-Type' => 'application/json',
@@ -271,26 +317,45 @@ class AIController extends Controller
                     ])
                     ->post($this->aiEndpoint . '/v1/chat/completions', $requestPayload);
 
-                // Log the raw response status and headers for debugging
-                Log::info("AI Response Status: " . $response->status(), [
-                    'headers' => $response->headers(),
+                // Log the response status and size
+                Log::info("AI Response received", [
                     'status' => $response->status(),
-                    'successful' => $response->successful() ? 'true' : 'false',
-                    'response_length' => strlen($response->body())
+                    'successful' => $response->successful() ? 'yes' : 'no',
+                    'response_size' => strlen($response->body())
                 ]);
 
                 if ($response->successful()) {
                     // Process the LLM response
                     $llmResponse = $response->json();
 
-                    // Log the raw response structure
-                    Log::debug("AI Raw Response Structure", [
-                        'has_choices' => isset($llmResponse['choices']) ? 'yes' : 'no',
-                        'choices_count' => isset($llmResponse['choices']) ? count($llmResponse['choices']) : 0,
-                        'first_choice_keys' => isset($llmResponse['choices'][0]) ? array_keys($llmResponse['choices'][0]) : []
-                    ]);
+                    if (!isset($llmResponse['choices']) || !isset($llmResponse['choices'][0]['message']['content'])) {
+                        // The response format is not as expected - use fallback
+                        Log::warning('AI response missing expected data structure', [
+                            'has_choices' => isset($llmResponse['choices']) ? 'yes' : 'no',
+                            'response_keys' => array_keys($llmResponse)
+                        ]);
 
-                    $insightsText = $llmResponse['choices'][0]['message']['content'] ?? '';
+                        // Generate fallback insights
+                        $fallbackInsights = $this->generateFallbackInsights($activityMetrics, [
+                            'avg_steps' => round($avgSteps),
+                            'avg_active_minutes' => round($avgActiveMinutes),
+                            'avg_distance' => round($avgDistance, 2)
+                        ]);
+
+                        return response()->json([
+                            'status' => 'success',
+                            'data' => [
+                                'insights' => $fallbackInsights,
+                                'is_fallback' => true,
+                                'message' => 'AI service returned unexpected data format. Using fallback insights.'
+                            ]
+                        ]);
+                    }
+
+                    $insightsText = $llmResponse['choices'][0]['message']['content'];
+
+                    // Log the first part of the response for debugging
+                    Log::debug("AI Response content: " . substr($insightsText, 0, 100) . "...");
 
                     // Try to parse the response as JSON
                     $parsedInsights = $this->extractJsonFromResponse($insightsText);
@@ -450,27 +515,33 @@ class AIController extends Controller
      */
     private function formatInsightsPrompt($currentMetrics, $averages)
     {
-        $prompt = "Provide personalized health insights based on this activity data:\n\n";
-        $prompt .= "CURRENT METRICS:\n";
+        // Create a simplified, more compact prompt
+        $prompt = "User activity data:\n";
 
+        // Include current metrics in a compact format
+        $prompt .= "Current: ";
+        $metricStr = [];
         foreach ($currentMetrics as $metric => $value) {
             if ($value !== null) {
-                $prompt .= ucfirst(str_replace('_', ' ', $metric)) . ": $value\n";
+                $label = str_replace(['daily_', '_'], ['', ' '], $metric);
+                $metricStr[] = "$label: $value";
             }
         }
+        $prompt .= implode(", ", $metricStr) . "\n";
 
-        $prompt .= "\nHISTORICAL AVERAGES (14-day):\n";
-        $prompt .= "Average Steps: {$averages['avg_steps']}\n";
-        $prompt .= "Average Active Minutes: {$averages['avg_active_minutes']}\n";
-        $prompt .= "Average Distance: {$averages['avg_distance']}\n\n";
+        // Include averages in a compact format
+        $prompt .= "14-day averages: ";
+        $prompt .= "steps: {$averages['avg_steps']}, ";
+        $prompt .= "active mins: {$averages['avg_active_minutes']}, ";
+        $prompt .= "distance: {$averages['avg_distance']}\n\n";
 
-        $prompt .= "Please provide actionable insights in JSON format with the following sections:\n\n";
-        $prompt .= "1. SUMMARY: A brief assessment of the current activity level compared to historical patterns.\n";
-        $prompt .= "2. HEALTH IMPACT: The potential health impacts of maintaining the current activity levels.\n";
-        $prompt .= "3. RECOMMENDATIONS: Specific, actionable recommendations for optimizing activity for health benefits.\n";
-        $prompt .= "4. NEXT STEPS: Suggested immediate actions the user can take to improve their health metrics.\n\n";
+        $prompt .= "Analyze this data and provide insights in JSON format with these sections:\n";
+        $prompt .= "1. summary: Brief assessment of current activity vs historical patterns\n";
+        $prompt .= "2. health_impact: Potential health impacts of the activity levels\n";
+        $prompt .= "3. recommendations: Specific, actionable recommendations\n";
+        $prompt .= "4. next_steps: Immediate actions for improvement\n\n";
 
-        $prompt .= "Format your response as a valid JSON object with these four main sections.";
+        $prompt .= "Return a clean, valid JSON object.";
 
         return $prompt;
     }
@@ -699,9 +770,18 @@ class AIController extends Controller
      */
     private function generateFallbackInsights($currentMetrics, $averages)
     {
-        $steps = $currentMetrics['daily_steps'] ?? 0;
-        $activeMinutes = $currentMetrics['active_minutes'] ?? 0;
-        $distance = $currentMetrics['distance'] ?? 0;
+        // Ensure we have scalar values, not arrays
+        $steps = isset($currentMetrics['daily_steps']) ? (is_array($currentMetrics['daily_steps']) ? 0 : $currentMetrics['daily_steps']) : 0;
+        $activeMinutes = isset($currentMetrics['active_minutes']) ? (is_array($currentMetrics['active_minutes']) ? 0 : $currentMetrics['active_minutes']) : 0;
+        $distance = isset($currentMetrics['distance']) ? (is_array($currentMetrics['distance']) ? 0 : $currentMetrics['distance']) : 0;
+
+        // Log the metrics for debugging
+        Log::debug('Fallback Insights - Current Metrics:', [
+            'raw_metrics' => $currentMetrics,
+            'processed_steps' => $steps,
+            'processed_active_minutes' => $activeMinutes,
+            'processed_distance' => $distance
+        ]);
 
         $avgSteps = $averages['avg_steps'] ?? 0;
         $avgActiveMinutes = $averages['avg_active_minutes'] ?? 0;
